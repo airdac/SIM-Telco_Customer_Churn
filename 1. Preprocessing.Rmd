@@ -1,0 +1,82 @@
+---
+title: "SIM Project 2. Preprocessing"
+author: "Adrià Casanova, Víctor Garcia, Zhengyong Ji"
+date: "2023-12-02"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    number_sections: no
+editor_options:
+  chunk_output_type: console
+---
+
+```{r, echo=T, message=FALSE, warning=FALSE, results='hide'}
+# Clean the workspace
+if(!is.null(dev.list())) dev.off()
+rm(list = ls())
+```
+
+```{r}
+# Import the libraries
+
+library(dplyr) 
+```
+
+
+```{r}
+# Import the dataset
+df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls"); summary (df)
+str(df)
+```
+
+# 1. Data Quality Report
+
+```{r}
+# The data has customerID and Churn, both should be removed from the trianing set for the modelling.
+
+# The only numerical feature that we have are tenure, MonthlyCharges and TotalChages.
+numeric_val = c(6, 19, 20)
+
+# So the remaining will be categorical feature.
+categoric_val = c(names(df))
+# Remove the ID and target
+categoric_val = categoric_val[-c(1,21,numeric_val)]
+
+```
+
+```{r}
+# Transforma categoric into factor and numerical into integer.
+df[categoric_val] = lapply(df[categoric_val], as.factor)
+
+df[numeric_val] = lapply(df[numeric_val], as.numeric)
+```
+
+```{r}
+# Let's check the distribution of numeric variable, in order to add discretization to convert it into facotrs.
+sapply(select(df, numeric_val), table)
+# The distribution of numerical variable are not normal.
+hist(df$tenure)
+hist(df$TotalCharges)
+hist(df$MonthlyCharges)
+# So we need to find a way to discretize these feature but not losing information.
+
+# And for the factors, there is no missing values
+sapply(select(df, categoric_val), table)
+
+```
+
+```{r}
+summary(df)
+
+# Checking the overall data quality, there is only 11 missing from TotalCharges.
+df[which(is.na(df$TotalCharges)),]
+
+# The reason that TotalChages is empty could be that, either the record is missing, either the user never paid it. No matter the situation, we can compute it as product of "tenure" and "MonthlyCharges"
+
+```
+
+
