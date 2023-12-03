@@ -46,6 +46,7 @@ categoric_val = c(names(df))
 # Remove the ID and target
 categoric_val = categoric_val[-c(1,21,numeric_val)]
 
+df$Churn = as.factor(df$Churn)
 ```
 
 ```{r}
@@ -62,7 +63,7 @@ sapply(select(df, numeric_val), table)
 hist(df$tenure)
 hist(df$TotalCharges)
 hist(df$MonthlyCharges)
-# So we need to find a way to discretize these feature but not losing information.
+# So we need to find a way to discretize these feature but not losing information. TO DO
 
 # And for the factors, there is no missing values
 sapply(select(df, categoric_val), table)
@@ -75,8 +76,20 @@ summary(df)
 # Checking the overall data quality, there is only 11 missing from TotalCharges.
 df[which(is.na(df$TotalCharges)),]
 
-# The reason that TotalChages is empty could be that, either the record is missing, either the user never paid it. No matter the situation, we can compute it as product of "tenure" and "MonthlyCharges"
+# The reason that TotalCharges is NA is because the tenure is 0, meaning that the it's a fresh joined client. In this situation, instead of NA, we can convert it into 0, or more precisely compute it as product of "tenure" and "MonthlyCharges".
 
+df$TotalCharges[which(is.na(df$TotalCharges))] = df$MonthlyCharges[which(is.na(df$TotalCharges))] * df$tenure[which(is.na(df$TotalCharges))]
+
+# Now there is no missing values
+summary(df)
 ```
 
+```{r}
+# We can check if there is any inconsistency in total charges.
+# First, let's compute the expected total charges as product of monthly charges and tenure
+expected_total_charges = df$MonthlyCharges * df$tenure
+
+# Then plot it in a linear regression model, where we can see that there is no outliers.
+plot(expected_total_charges, df$TotalCharges)
+```
 
