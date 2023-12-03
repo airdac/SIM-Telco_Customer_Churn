@@ -22,8 +22,9 @@ rm(list = ls())
 
 ```{r}
 # Import the libraries
-
 library(dplyr) 
+library(car)
+library(DataExplorer)
 ```
 
 
@@ -50,15 +51,43 @@ categoric_val = categoric_val[-c(1,numeric_val)]
 # Let's check the distribution of the numeric variables in order to discretize
 # them in factors.
 
-hist(df$tenure)
+
 hist(df$TotalCharges)
 hist(df$MonthlyCharges)
+```
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!! TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+```{r}
+par(mfrow=c(1,2))
+hist(df$tenure, prob = TRUE, breaks = 10, main = 'Histogram of tenure 
+     vs normal distribution', xlab = 'tenure')
+x <- seq(min(df$tenure), max(df$tenure), by = .1)
+y <- dnorm(x, mean = mean(df$tenure), sd = sd(df$tenure))
+plot(x,y, xlab = 'tenuere', ylab = '')
+
+hist(df$TotalCharges, prob = TRUE, breaks = 10, main = 'Hist totalCharges 
+     vs normal distribution', xlab = 'TotalCharges')
+x <- seq(min(df$TotalCharges, na.rm = TRUE), max(df$TotalCharges, na.rm = TRUE),
+         by = 10)
+y <- dnorm(x, mean = mean(df$TotalCharges, na.rm = TRUE), sd = sd(df$TotalCharges, na.rm = TRUE))
+plot(x,y, xlab = 'TotalCharges', ylab = '')
+
+hist(df$MonthlyCharges, prob = TRUE, breaks = 10, main = 'Hist MonthlyCharges 
+     vs normal distribution', xlab = 'df$MonthlyCharges')
+x <- seq(min(df$MonthlyCharges, na.rm = TRUE), max(df$MonthlyCharges, na.rm = TRUE),
+         by = .1)
+y <- dnorm(x, mean = mean(df$MonthlyCharges, na.rm = TRUE), sd = sd(df$MonthlyCharges, na.rm = TRUE))
+plot(x,y, xlab = 'df$MonthlyCharges', ylab = '')
+
+par(mfrow=c(1,1))
 ```
 
 ```{r}
 # EDA for each variable (numeric and graphic)
+summary(df)
+
+# The plot of all variables can be seen in the report
+#create_report(df, output_file = "Telco.html")
 ```
 
 # 2. Data Quality Report
@@ -78,8 +107,16 @@ expected_total_charges = df$MonthlyCharges * df$tenure
 
 # Then plot them against the actual total charges
 plot(expected_total_charges, df$TotalCharges)
-# There are no outliers.
+# There are no outliers, we can check this visually using boxplots
 ```
+
+```{r}
+id_num_val = c(6, 19, 20)
+for (var in id_num_val) {
+  Boxplot(df[,var], ylab = names(df)[var], main = "Boxplot") 
+}
+```
+
 
 ## Regarding Individuals
 
