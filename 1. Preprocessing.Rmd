@@ -29,67 +29,98 @@ library(dplyr)
 
 ```{r}
 # Import the dataset
-df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls"); summary (df)
+df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls",header=T, sep=",",
+              stringsAsFactors=TRUE)
 str(df)
+summary (df)
 ```
 
-# 1. Data Quality Report
+# 1. Univariate Descriptive Analysis
 
 ```{r}
-# The data has customerID and Churn, both should be removed from the trianing set for the modelling.
-
-# The only numerical feature that we have are tenure, MonthlyCharges and TotalChages.
+# The only numerical features that we have are tenure, MonthlyCharges and TotalChages.
 numeric_val = c(6, 19, 20)
 
 # So the remaining will be categorical feature.
 categoric_val = c(names(df))
-# Remove the ID and target
-categoric_val = categoric_val[-c(1,21,numeric_val)]
-
-df$Churn = as.factor(df$Churn)
+categoric_val = categoric_val[-c(1,numeric_val)]
 ```
 
 ```{r}
-# Transforma categoric into factor and numerical into integer.
-df[categoric_val] = lapply(df[categoric_val], as.factor)
+# Let's check the distribution of the numeric variables in order to discretize
+# them in factors.
 
-df[numeric_val] = lapply(df[numeric_val], as.numeric)
-```
-
-```{r}
-# Let's check the distribution of numeric variable, in order to add discretization to convert it into facotrs.
-sapply(select(df, numeric_val), table)
-# The distribution of numerical variable are not normal.
 hist(df$tenure)
 hist(df$TotalCharges)
 hist(df$MonthlyCharges)
-# So we need to find a way to discretize these feature but not losing information. TO DO
 
-# And for the factors, there is no missing values
-sapply(select(df, categoric_val), table)
-
+# !!!!!!!!!!!!!!!!!!!!!!!!!! TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ```
 
 ```{r}
-summary(df)
+# EDA for each variable (numeric and graphic)
+```
 
-# Checking the overall data quality, there is only 11 missing from TotalCharges.
-df[which(is.na(df$TotalCharges)),]
+# 2. Data Quality Report
 
-# The reason that TotalCharges is NA is because the tenure is 0, meaning that the it's a fresh joined client. In this situation, instead of NA, we can convert it into 0, or more precisely compute it as product of "tenure" and "MonthlyCharges".
-
-df$TotalCharges[which(is.na(df$TotalCharges))] = df$MonthlyCharges[which(is.na(df$TotalCharges))] * df$tenure[which(is.na(df$TotalCharges))]
-
-# Now there is no missing values
-summary(df)
+## Regarding variables
+```{r}
+# Distribution of missings in df
+apply(sapply(df, is.na), 2, sum)
+# Only TotalCharges has missings values, 11 in total.
 ```
 
 ```{r}
 # We can check if there is any inconsistency in total charges.
-# First, let's compute the expected total charges as product of monthly charges and tenure
+# First, let's compute the expected total charges as the product of monthly
+# charges and tenure
 expected_total_charges = df$MonthlyCharges * df$tenure
 
-# Then plot it in a linear regression model, where we can see that there is no outliers.
+# Then plot them against the actual total charges
 plot(expected_total_charges, df$TotalCharges)
+# There are no outliers.
+```
+
+## Regarding Individuals
+
+## Create variables with: nº of missings (of each individual), nº of outliers,
+## nº of errors
+
+Compute the correlation with all other variables. Rank these variables according
+to the correlation
+
+Compute for every group of individuals (group of age, size of town, singles,
+married, …) the mean of missing/outliers/errors values. Rank the groups
+according to the computed mean.
+
+# Imputation
+
+## Nmeric Variables
+
+```{r}
+sum(which(is.na(df$TotalCharges))) == sum(which(df$tenure == 0))
+# Individuals with missing TotalCharges correspond to those whose tenure is 0, which means they are recently joined clients. In this situation, instead of NA, we can convert them to 0.
+
+df$TotalCharges[which(is.na(df$TotalCharges))] = 0
+
+# Now there aren't missing values
+summary(df)
+```
+
+## Factors
+
+# Profiling (target categories)
+
+# Feature Selection
+```{r}
+# customerID should be removed
+df$customerID <- NULL
+```
+
+
+# Modeling using numeric variables
+
+```{r}
+# Split df in train and test
 ```
 
