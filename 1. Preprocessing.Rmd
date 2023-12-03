@@ -23,6 +23,8 @@ rm(list = ls())
 ```{r}
 # Import the libraries
 library(dplyr) 
+library(car)
+library(DataExplorer)
 ```
 
 ```{r}
@@ -55,13 +57,13 @@ df$SeniorCitizen <- factor(df$SeniorCitizen, labels = c("Yes", "No"))
 
 # tenure
 df$c.tenure <- df$tenure
-m.tenure <- summary(df$tenure)[6]
+m.tenure <- max(df$tenure, na.rm = TRUE)
 df$c.tenure <- replace(df$c.tenure, df$tenure <= m.tenure/4, m.tenure/4)
 for (i in 1:3) {
   idx <- (m.tenure*i/4 < df$tenure) & (df$tenure <= m.tenure*(i+1)/4)
   df$c.tenure <- replace(df$c.tenure, idx, m.tenure*(i+1)/4)
 }
-summary(df$tenure)[1]
+min(df$tenure, na.rm = TRUE)
 breakpts <- seq(m.tenure/4, m.tenure, m.tenure/4); breakpts
 df$c.tenure <- factor(df$c.tenure, labels = c("(-1,18]", "(18,36]",
                                               "(36,54]", "(54,72]"))
@@ -74,14 +76,14 @@ hist(df$tenure)
 ```{r}
 # TotalCharges
 df$c.TotalCharges <- df$TotalCharges
-m.TotalCharges <- summary(df$TotalCharges)[6]
+m.TotalCharges <- max(df$TotalCharges, na.rm = TRUE)
 df$c.TotalCharges <- replace(df$c.TotalCharges, df$TotalCharges <= m.TotalCharges/4, m.TotalCharges/4)
 for (i in 1:3) {
   idx <- (m.TotalCharges*i/4 < df$TotalCharges) & (df$TotalCharges <=
                                                      m.TotalCharges*(i+1)/4)
   df$c.TotalCharges <- replace(df$c.TotalCharges, idx, m.TotalCharges*(i+1)/4)
 }
-summary(df$TotalCharges)[1]
+min(df$TotalCharges, ra.rm = TRUE)
 breakpts <- seq(m.TotalCharges/4, m.TotalCharges, m.TotalCharges/4); breakpts
 df$c.TotalCharges <- factor(df$c.TotalCharges, labels = c("(18,2171]",
                                                           "(2171,4342]", 
@@ -96,7 +98,7 @@ hist(df$TotalCharges)
 ```{r}
 # MonthlyCharges
 df$c.MonthlyCharges <- df$MonthlyCharges
-m.MonthlyCharges <- summary(df$MonthlyCharges)[6]
+m.MonthlyCharges <- max(df$MonthlyCharges, na.rm = TRUE)
 df$c.MonthlyCharges <- replace(df$c.MonthlyCharges, df$MonthlyCharges <= m.MonthlyCharges/4, m.MonthlyCharges/4)
 for (i in 1:3) {
   idx <- (m.MonthlyCharges*i/4 < df$MonthlyCharges) & (df$MonthlyCharges <=
@@ -104,7 +106,7 @@ for (i in 1:3) {
   df$c.MonthlyCharges <- replace(df$c.MonthlyCharges, idx,
                                  m.MonthlyCharges*(i+1)/4)
 }
-summary(df$MonthlyCharges)[1]
+min(df$MonthlyCharges, na.rm = TRUE)
 breakpts <- seq(m.MonthlyCharges/4, m.MonthlyCharges, m.MonthlyCharges/4)
 breakpts
 df$c.MonthlyCharges <- factor(df$c.MonthlyCharges, labels = c("(18,30.69]",
@@ -115,11 +117,49 @@ summary(df$c.MonthlyCharges)
 par(mfrow=c(1,2))
 plot(df$c.MonthlyCharges, main = "Barplot of df$c.MonthlyCharges")
 hist(df$MonthlyCharges)
+par(mfrow=c(1,1))
+```
+
+```{r}
+hist(df$TotalCharges)
+hist(df$MonthlyCharges)
+```
+
+```{r}
+par(mfrow=c(1,2))
+hist(df$tenure, prob = TRUE, breaks = 10, main = 'Histogram of tenure 
+     vs normal distribution', xlab = 'tenure')
+x <- seq(min(df$tenure), max(df$tenure), by = .1)
+y <- dnorm(x, mean = mean(df$tenure), sd = sd(df$tenure))
+plot(x,y, xlab = 'tenuere', ylab = '')
+
+hist(df$TotalCharges, prob = TRUE, breaks = 10, main = 'Hist totalCharges 
+     vs normal distribution', xlab = 'TotalCharges')
+x <- seq(min(df$TotalCharges, na.rm = TRUE), max(df$TotalCharges, na.rm = TRUE),
+         by = 10)
+y <- dnorm(x, mean = mean(df$TotalCharges, na.rm = TRUE), sd = sd(df$TotalCharges, na.rm = TRUE))
+plot(x,y, xlab = 'TotalCharges', ylab = '')
+
+hist(df$MonthlyCharges, prob = TRUE, breaks = 10, main = 'Hist MonthlyCharges 
+     vs normal distribution', xlab = 'df$MonthlyCharges')
+x <- seq(min(df$MonthlyCharges, na.rm = TRUE), max(df$MonthlyCharges, na.rm = TRUE),
+         by = .1)
+y <- dnorm(x, mean = mean(df$MonthlyCharges, na.rm = TRUE), sd = sd(df$MonthlyCharges, na.rm = TRUE))
+plot(x,y, xlab = 'df$MonthlyCharges', ylab = '')
+
+par(mfrow=c(1,1))
 ```
 
 ```{r}
 # EDA for each variable (numeric and graphic)
+summary(df)
+
+# The plot of all variables can be seen in the report
+#create_report(df, output_file = "Telco.html")
 ```
+
+
+
 
 # 2. Data Quality Report
 
@@ -138,8 +178,16 @@ expected_total_charges = df$MonthlyCharges * df$tenure
 
 # Then plot them against the actual total charges
 plot(expected_total_charges, df$TotalCharges)
-# There are no outliers.
+# There are no outliers, we can check this visually using boxplots
 ```
+
+```{r}
+id_num_val = c(6, 19, 20)
+for (var in id_num_val) {
+  Boxplot(df[,var], ylab = names(df)[var], main = "Boxplot") 
+}
+```
+
 
 ## Regarding Individuals
 
