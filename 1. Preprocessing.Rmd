@@ -22,39 +22,99 @@ rm(list = ls())
 
 ```{r}
 # Import the libraries
-
 library(dplyr) 
 ```
-
 
 ```{r}
 # Import the dataset
 df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls",header=T, sep=",",
               stringsAsFactors=TRUE)
 str(df)
-summary (df)
+summary(df)
+```
+
+```{r}
+# The only numerical features that we have are tenure, MonthlyCharges and TotalChages.
+numeric_val_idx = which(sapply(df, is.numeric))
+numeric_val = names(df)[numeric_val_idx]
+
+# So the remaining will be categorical features.
+categoric_val_idx = which(sapply(df, is.factor))
+categoric_val = names(df)[categoric_val_idx]
 ```
 
 # 1. Univariate Descriptive Analysis
 
 ```{r}
-# The only numerical features that we have are tenure, MonthlyCharges and TotalChages.
-numeric_val = c(6, 19, 20)
-
-# So the remaining will be categorical feature.
-categoric_val = c(names(df))
-categoric_val = categoric_val[-c(1,numeric_val)]
+# SeniorCitizen represents a qualitative concept, so we convert it to factor
+df$SeniorCitizen <- factor(df$SeniorCitizen, labels = c("Yes", "No"))
 ```
 
 ```{r}
-# Let's check the distribution of the numeric variables in order to discretize
-# them in factors.
+# Discretize numerical variables
 
+# tenure
+df$c.tenure <- df$tenure
+m.tenure <- summary(df$tenure)[6]
+df$c.tenure <- replace(df$c.tenure, df$tenure <= m.tenure/4, m.tenure/4)
+for (i in 1:3) {
+  idx <- (m.tenure*i/4 < df$tenure) & (df$tenure <= m.tenure*(i+1)/4)
+  df$c.tenure <- replace(df$c.tenure, idx, m.tenure*(i+1)/4)
+}
+summary(df$tenure)[1]
+breakpts <- seq(m.tenure/4, m.tenure, m.tenure/4); breakpts
+df$c.tenure <- factor(df$c.tenure, labels = c("(-1,18]", "(18,36]",
+                                              "(36,54]", "(54,72]"))
+summary(df$c.tenure)
+par(mfrow=c(1,2))
+plot(df$c.tenure, main = "Barplot of df$c.tenure")
 hist(df$tenure)
-hist(df$TotalCharges)
-hist(df$MonthlyCharges)
+```
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!! TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+```{r}
+# TotalCharges
+df$c.TotalCharges <- df$TotalCharges
+m.TotalCharges <- summary(df$TotalCharges)[6]
+df$c.TotalCharges <- replace(df$c.TotalCharges, df$TotalCharges <= m.TotalCharges/4, m.TotalCharges/4)
+for (i in 1:3) {
+  idx <- (m.TotalCharges*i/4 < df$TotalCharges) & (df$TotalCharges <=
+                                                     m.TotalCharges*(i+1)/4)
+  df$c.TotalCharges <- replace(df$c.TotalCharges, idx, m.TotalCharges*(i+1)/4)
+}
+summary(df$TotalCharges)[1]
+breakpts <- seq(m.TotalCharges/4, m.TotalCharges, m.TotalCharges/4); breakpts
+df$c.TotalCharges <- factor(df$c.TotalCharges, labels = c("(18,2171]",
+                                                          "(2171,4342]", 
+                                                          "(4342,6514]",
+                                                          "(6514,8685]"))
+summary(df$c.TotalCharges)
+par(mfrow=c(1,2))
+plot(df$c.TotalCharges, main = "Barplot of df$c.TotalCharges")
+hist(df$TotalCharges)
+```
+
+```{r}
+# MonthlyCharges
+df$c.MonthlyCharges <- df$MonthlyCharges
+m.MonthlyCharges <- summary(df$MonthlyCharges)[6]
+df$c.MonthlyCharges <- replace(df$c.MonthlyCharges, df$MonthlyCharges <= m.MonthlyCharges/4, m.MonthlyCharges/4)
+for (i in 1:3) {
+  idx <- (m.MonthlyCharges*i/4 < df$MonthlyCharges) & (df$MonthlyCharges <=
+                                                       m.MonthlyCharges*(i+1)/4)
+  df$c.MonthlyCharges <- replace(df$c.MonthlyCharges, idx,
+                                 m.MonthlyCharges*(i+1)/4)
+}
+summary(df$MonthlyCharges)[1]
+breakpts <- seq(m.MonthlyCharges/4, m.MonthlyCharges, m.MonthlyCharges/4)
+breakpts
+df$c.MonthlyCharges <- factor(df$c.MonthlyCharges, labels = c("(18,30.69]",
+                                                          "(30.69,59.38]", 
+                                                          "(59.38,89.06]",
+                                                          "(89.06,118.75]"))
+summary(df$c.MonthlyCharges)
+par(mfrow=c(1,2))
+plot(df$c.MonthlyCharges, main = "Barplot of df$c.MonthlyCharges")
+hist(df$MonthlyCharges)
 ```
 
 ```{r}
