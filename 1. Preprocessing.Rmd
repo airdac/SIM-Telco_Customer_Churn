@@ -1,7 +1,7 @@
 ---
 title: "SIM Project 2. Preprocessing"
 author: "Adrià Casanova, Víctor Garcia, Zhengyong Ji"
-date: "2023-12-02"
+date: "2024-01-05"
 output:
   word_document:
     toc: yes
@@ -209,11 +209,13 @@ according to the computed mean.
 
 ```{r}
 sum(which(is.na(df$TotalCharges))) == sum(which(df$tenure == 0))
-# Individuals with missing TotalCharges correspond to those whose tenure is 0, which means they are recently joined clients. In this situation, instead of NA, we can convert them to 0.
+# Individuals with missing TotalCharges correspond to those whose tenure is 0, 
+# which means they are recently joined clients. 
+# In this situation, instead of NA, we can convert them to 0.
 
 df$TotalCharges[which(is.na(df$TotalCharges))] = 0
 
-# Now there aren't missing values
+# Now there are no more missing values
 summary(df)
 ```
 
@@ -226,14 +228,18 @@ summary(df)
 # customerID should be removed
 df$customerID <- NULL
 
-
-# Execute catdes function to find the correlation between the variables against our qualitative target.
+# Execute catdes function to find the correlation between the variables 
+# against our qualitative target Churn.
 res.cat = catdes(df, 20)
 
 # Through sqrt_chi test, we can rank the most influential feature.
 res.cat$test.chi2
 
+# The outcome of Chi sqrt test proved that all the categorical feature are meanfull (p-value > 0.05)
 # The key feature are the "Contract" period type, followed by "OnlineSecurity" and the "TechSupport".
+
+res.cat$quanti.var
+# And the correlation of numerical variable are also important.
 ```
 
 
@@ -241,7 +247,8 @@ res.cat$test.chi2
 # Modeling using numeric variables
 
 ```{r}
-# First, let's split the dataset into training and testing. We can consider that 70% of data will be used for training purpose.
+# First, let's split the dataset into training and testing. 
+# We can consider that 70% of data will be used for training purpose.
 
 set.seed(123)
 
