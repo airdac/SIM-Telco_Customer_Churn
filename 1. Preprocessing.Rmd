@@ -350,9 +350,22 @@ test = subset(df, sampling == FALSE)
 
 
 ```{r}
-# Let's start with our first model, considering all the features.
+# The first model will be with all the original variables.
 
-m0 = glm (Churn ~., data = train, family = binomial )
+m0 = glm (Churn ~., data = train[,1:20], family = binomial )
 summary(m0)
+
+# The second model will be with all the categorical variable, including the discretized value (the numerical's ones).
+
+m0.c = glm (Churn ~., data = train[,-c(5,18,19)], family = binomial)
+summary(m0.c)
+
+# Compare the difference of these two model with AIC criteria.
+AIC (m0, m0.c)
+
+# The AIC parameter for both model are quite similar, although the m0.c is slightly better.
+
+# We've tried to run the anova test, but due to the divergence of the dimension, it can not run properly.
+anova (m0, m0.c, test = "Chisq")
 ```
 
