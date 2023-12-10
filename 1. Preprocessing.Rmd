@@ -21,12 +21,14 @@ rm(list = ls())
 ```
 
 ```{r}
-# Import the libraries
+# Import the libraries and other sources
 library(dplyr) 
 library(car)
 library(DataExplorer)
 library(FactoMineR)
 library(caTools)
+library(chemometrics)
+source("profiling_func.R")
 ```
 
 ```{r}
@@ -35,16 +37,6 @@ df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls",header=T, sep=",",
               stringsAsFactors=TRUE)
 str(df)
 summary(df)
-```
-
-```{r}
-# The only numerical features that we have are tenure, MonthlyCharges and TotalChages.
-numeric_val_idx = which(sapply(df, is.numeric))
-numeric_val = names(df)[numeric_val_idx]
-
-# So the remaining will be categorical features.
-categoric_val_idx = which(sapply(df, is.factor))
-categoric_val = names(df)[categoric_val_idx]
 ```
 
 # 1. Univariate Descriptive Analysis
@@ -85,9 +77,8 @@ for (i in 1:3) {
                                                      m.TotalCharges*(i+1)/4)
   df$c.TotalCharges <- replace(df$c.TotalCharges, idx, m.TotalCharges*(i+1)/4)
 }
-min(df$TotalCharges, ra.rm = TRUE)
 breakpts <- seq(m.TotalCharges/4, m.TotalCharges, m.TotalCharges/4); breakpts
-df$c.TotalCharges <- factor(df$c.TotalCharges, labels = c("(18,2171]",
+df$c.TotalCharges <- factor(df$c.TotalCharges, labels = c("(-1,2171]",
                                                           "(2171,4342]", 
                                                           "(4342,6514]",
                                                           "(6514,8685]"))
@@ -122,12 +113,7 @@ hist(df$MonthlyCharges)
 par(mfrow=c(1,1))
 ```
 
-```{r}
-hist(df$TotalCharges)
-hist(df$MonthlyCharges)
-```
-
-```{r}
+```{r, eval = FALSE}
 par(mfrow=c(1,2))
 hist(df$tenure, prob = TRUE, breaks = 10, main = 'Histogram of tenure 
      vs normal distribution', xlab = 'tenure')
@@ -153,13 +139,25 @@ par(mfrow=c(1,1))
 ```
 
 ```{r}
+# The only numerical features that we have are tenure, MonthlyCharges and TotalChages.
+numeric_val_idx = which(sapply(df, is.numeric))
+numeric_val = names(df)[numeric_val_idx]
+
+# So the remaining will be categorical features.
+categoric_val_idx = which(sapply(df, is.factor))
+categoric_val = names(df)[categoric_val_idx]
+```
+
+```{r}
 # EDA for each variable (numeric and graphic)
 summary(df)
 
 # The plot of all variables can be seen in the report
 #create_report(df, output_file = "Telco.html")
-```
 
+# In the report we can see that no numeric variable has a normal distribution,
+# so there is no need to perform any test on their normality.
+```
 
 
 
@@ -169,59 +167,152 @@ summary(df)
 ```{r}
 # Distribution of missings in df
 apply(sapply(df, is.na), 2, sum)
-# Only TotalCharges has missings values, 11 in total.
+# Only TotalCharges and hence c.TotalCharges have missings values, 22 in total.
 ```
 
 ```{r}
-# We can check if there is any inconsistency in total charges.
+# We can check if there are inconsistencies in total charges. That is the only
+# variable that could have any.
 # First, let's compute the expected total charges as the product of monthly
 # charges and tenure
 expected_total_charges = df$MonthlyCharges * df$tenure
 
 # Then plot them against the actual total charges
 plot(expected_total_charges, df$TotalCharges)
-# There are no outliers, we can check this visually using boxplots
+# There are no outliers, so TotalCharges is consistent.
 ```
 
 ```{r}
-id_num_val = c(6, 19, 20)
-for (var in id_num_val) {
+# Outliers
+for (var in as.numeric(numeric_val_idx)) {
   Boxplot(df[,var], ylab = names(df)[var], main = "Boxplot") 
 }
+# There aren't univariate outliers
 ```
 
-
 ## Regarding Individuals
+
+```{r}
+# Distribution of missings
+table(apply(sapply(df, is.na), 1, sum))
+# As could be deduced from the distribution of missings per variable, only
+# eleven records have missings. Precisely, these individuals have an na value
+# for TotalCharges and c.TotalCharges. We can find them.
+which(is.na(df$TotalCharges))
+```
+
+To look for multivariant outliers, we need to impute or remove all our missing
+data, so we will conduct a search later.
 
 ## Create variables with: nº of missings (of each individual), nº of outliers,
 ## nº of errors
 
-Compute the correlation with all other variables. Rank these variables according
-to the correlation
+```{r}
+df$n.na <- apply(sapply(df, is.na), 1, sum)
+df$n.outliers <- rep(0,dim(df)[1])
+df$n.errors <- rep(0,dim(df)[1])
+```
 
-Compute for every group of individuals (group of age, size of town, singles,
-married, …) the mean of missing/outliers/errors values. Rank the groups
-according to the computed mean.
+We will compute the correlation between these new variables and the rest of
+variables in the data frame after imputing.
+
+Next, we will compute for every group of individuals the mean of missing values. Then we will rank the groups according to the computed mean.
+
+```{r}
+# c.TotalCharges has missings, so it doesn't make sense to compute the mean
+# of missings in its categories
+
+interesting_cat_idx <- categoric_val_idx[-c(1,20)]
+k = 0
+for (i in interesting_cat_idx){
+  k <- k + length(levels(df[,i]))
+}
+groups.na <- matrix(0, k, 2)
+l = 1
+for (i in seq(length(interesting_cat_idx))) {
+  idx <- interesting_cat_idx[i]
+  categories.na <- tapply(df$n.na, df[,idx], mean)
+  for (j in seq(length(categories.na))) {
+    groups.na[l + j - 1,] <- c(as.numeric(categories.na[j]),
+                               paste(names(df)[idx], levels(df[,idx])[j],
+                                     sep = "."))
+  }
+  l <- l + j
+}
+groups.na.df <- data.frame(na.perc = groups.na[,1], group = groups.na[,2])
+groups.na.df[order(groups.na.df$na.perc, decreasing = TRUE),]
+```
+
 
 # Imputation
 
 ## Numeric Variables
 
 ```{r}
-sum(which(is.na(df$TotalCharges))) == sum(which(df$tenure == 0))
+TotalCharges.na <- which(is.na(df$TotalCharges))
+sum(TotalCharges.na == which(df$tenure == 0)) == length(TotalCharges.na)
 # Individuals with missing TotalCharges correspond to those whose tenure is 0, 
 # which means they are recently joined clients. 
 # In this situation, instead of NA, we can convert them to 0.
 
-df$TotalCharges[which(is.na(df$TotalCharges))] = 0
+na.idx <- which(is.na(df$TotalCharges))
+df$TotalCharges[na.idx] = 0
+df$c.TotalCharges[na.idx] = "(-1,2171]"
 
 # Now there are no more missing values
 summary(df)
 ```
 
-## Factors
+```{r}
+# Let's look at the correlation between our variables, specially between
+# the ones created for the data quality report and the rest of them.
+corr_mat <- cor(df[,c(numeric_val_idx, 25)],)
+corr_mat
+
+corrplot(corr_mat, order = 'hclust')
+# n.na isn't related to any other variable. However, TotalCharges is both
+# related to tenure and MonthlyCharges. We already saw this phenomenon when
+# we ploted TotalCharges against tenure*MonthlyCharges.
+```
+
+
+```{r}
+# Let's look for multiavariant outliers
+set.seed(123)
+res.mout <- Moutlier(df[,numeric_val_idx], quantile = 0.95, plot= FALSE)
+
+par(mfrow=c(1,2))
+plot(res.mout$md, col="lightblue", pch = 19, main = 'Detection of multivariable 
+outliers', xlab= 'Observation', 
+     ylab ='Traditional Mahalanobis distance ')
+abline(h = res.mout$cutoff, col = "red", lwd = 5, lty = 2)
+
+plot(res.mout$rd, col="lightblue", pch = 19, xlab= 'Observation', 
+     ylab ='Robust Mahalanobis distance ')
+abline(h = res.mout$cutoff, col = "red", lwd = 5, lty = 2)
+par(mfrow=c(1,1))
+
+outliers = which(res.mout$md>res.mout$cutoff & res.mout$rd > res.mout$cutoff) 
+length(outliers)
+length(outliers)/dim(df)[1]*100
+# There are 344 multivariant outliers, about 5% of the individuals.
+```
+
+```{r}
+# After the report, we remove the newly created variables to don't interfere
+# in the rest of the project
+df$n.na <- NULL
+df$n.errors <- NULL
+df$n.outliers <- NULL
+```
+
 
 # Profiling (target categories)
+
+```{r}
+profiling(df[-1], df$Churn, "Churn")
+```
+
 
 # Feature Selection
 ```{r}
