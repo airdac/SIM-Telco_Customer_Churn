@@ -278,3 +278,9 @@ AIC (m0, m0.c)
 anova (m0, m0.c, test = "Chisq")
 ```
 
+The AIC criteria shows that using numerical variables or discretized variables cannot make much difference. In this situation, in order to reduce the workload, we decided to use the discretized variables (hence, we'll have only categorical variable)
+
+```{r}
+
+```
+
