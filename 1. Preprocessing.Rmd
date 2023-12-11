@@ -364,10 +364,10 @@ summary(m0.c)
 # Compare the difference of these two model with AIC criteria.
 AIC (m0, m0.c)
 
-# The AIC parameter for both model are quite similar, although the m0.c is slightly better.
+# The AIC parameter for both model are quite similar, although the m0 is slightly better.
 
-# Based on the anova test, 
-anova (m0, m0.c, test = "Chisq")
+# The same conclution could be obtained by running anova test ()
+Anova (m0, m0.c, test = "Chisq")
 ```
 
 The AIC criteria shows that using numerical variables or discretized variables cannot make much difference. In this situation, in order to reduce the workload, we decided to use the discretized variables (hence, we'll have only categorical variable)
