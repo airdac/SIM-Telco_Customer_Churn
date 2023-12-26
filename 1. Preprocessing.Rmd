@@ -371,11 +371,12 @@ Anova (m0.numerical)
 ```
 
 ```{r}
-# Check the previous model, but with different transformations like logaritmit.
+# Check the previous model, but with different transformations like logarithmic.
 
+# First steps is to convert the 0 to 1e-6. By doing this, we'll be able to implement the boxtidewell method
 train_positive = replace(train, train == 0, 1e-6)
-train_positive$Churn == as.numeric(train$Churn)
 
+train_positive$Churn == ifelse(train$Churn == "False", 0, 1)
 
 boxTidwell(Churn ~ tenure + TotalCharges, data = train_positive)
 ```
