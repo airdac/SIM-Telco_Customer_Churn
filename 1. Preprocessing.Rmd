@@ -14,6 +14,15 @@ editor_options:
   chunk_output_type: console
 ---
 
+
+
+- Ocultar la import de datos y libreria.
+- Residual analysis at the end of the project.
+- Profiling: AN EXTRA POINT TO BE DONE. WE CAN DO IT LATTER. USE THE SCRIPT PROVIDED BY MVA. 
+
+
+
+
 ```{r, echo=T, message=FALSE, warning=FALSE, results='hide'}
 # Clean the workspace
 if(!is.null(dev.list())) dev.off()
@@ -51,7 +60,7 @@ df$SeniorCitizen <- factor(df$SeniorCitizen, labels = c("Yes", "No"))
 # Discretize numerical variables
 
 # tenure
-df$c.tenure <- df$tenure
+df$c.tenure <- df$tenure # Create a new variable called Categorical.tenure
 m.tenure <- max(df$tenure, na.rm = TRUE)
 df$c.tenure <- replace(df$c.tenure, df$tenure <= m.tenure/4, m.tenure/4)
 for (i in 1:3) {
@@ -296,11 +305,11 @@ par(mfrow=c(1,1))
 outliers = which(res.mout$md>res.mout$cutoff & res.mout$rd > res.mout$cutoff) 
 length(outliers)
 length(outliers)/dim(df)[1]*100
-# There are 344 multivariant outliers, about 5% of the individuals.
+# There are 344 multivariant outliers, about 5% of the individuals as expect. We'll keep these observation for further analysis.
 ```
 
 ```{r}
-# After the report, we remove the newly created variables to don't interfere
+# After the report, we remove the newly created variables to  not interfere
 # in the rest of the project
 df$n.na <- NULL
 df$n.errors <- NULL
@@ -351,7 +360,39 @@ test = subset(df, sampling == FALSE)
 
 
 ```{r}
-# The first model will be with all the original variables.
+# Modelling with only numerical variables.
+
+m0.numerical = glm (Churn ~ tenure + TotalCharges, data = train, family = binomial)
+
+summary(m0.numerical)
+
+# Checking the Anova test, there is no variable excluded, which means that all of then are relevant.
+Anova (m0.numerical)
+```
+
+```{r}
+# Check the previous model, but with different transformations like logaritmit.
+
+train_positive = replace(train, train == 0, 1e-6)
+train_positive$Churn == as.numeric(train$Churn)
+
+
+boxTidwell(Churn ~ tenure + TotalCharges, data = train_positive)
+```
+
+
+
+```{r}
+m0.discrete = glm (Churn ~ c.tenure + c.TotalCharges, data = train, family = binomial)
+
+summary (m0.discrete)
+
+Anova (m0.numerical)
+```
+
+
+```{r}
+# The first model will be with all the ORIGINAL variables.
 
 m0 = glm (Churn ~., data = train[,1:20], family = binomial)
 summary(m0)
