@@ -30,6 +30,7 @@ library(caTools)
 library(chemometrics)
 library(corrplot)
 source("profiling_func.R")
+library(MASS)
 ```
 
 ```{r}
@@ -370,19 +371,35 @@ m0.numerical = glm (Churn ~ tenure + TotalCharges, data = train, family = binomi
 
 summary(m0.numerical)
 
-# Checking the Anova test, there is no variable excluded, which means that all of then are relevant.
+# Checking the Anova test, there is no variable removed, which means that all of then are relevant.
 Anova (m0.numerical)
 ```
 
 ```{r}
-# Check the previous model, but with different transformations like logaritmit.
+# Check the possible transformation for the previous model
 
 train_positive = replace(train, train == 0, 1e-6)
 train_positive$Churn == as.numeric(train$Churn)
 
 
+boxcox(Churn ~ tenure + TotalCharges, data = train_positive)
 boxTidwell(Churn ~ tenure + TotalCharges, data = train_positive)
 ```
+
+```{r}
+
+
+m1 = glm (Churn ~ tenure + log(TotalCharges), data = train, family = binomial)
+```
+
+
+
+
+
+
+
+
+
 
 
 
