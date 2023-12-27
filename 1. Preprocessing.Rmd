@@ -30,7 +30,6 @@ library(caTools)
 library(chemometrics)
 library(corrplot)
 source("profiling_func.R")
-library(MASS)
 ```
 
 ```{r}
@@ -147,6 +146,8 @@ The main conclusions of this section are:
 3- Qualitative variables have a maximum of 4 levels, so all of them may be suitable for modeling without any aggregation of levels.
 
 4- Imputation is not required as there are mainly qualitative variables without missings. Missings will also be discussed in the next section.
+
+5- Some categories, like "OnlineSecurity" or "OnlineBackup", are not applicable if the client does not have an internet connection. Consequently, there is an special level for those cases that represents around 30% of the categories. 
 
 ```{r}
 # Basic EDA
@@ -309,45 +310,95 @@ df$n.na <- NULL
 
 ## Categorical variables
 
-Secondly, we 
+Secondly, we performed a profiling using "gtable" which allows us to check if there are significant differences of the levels of a variable and the target.This is done visually and using  a "Pearson's Chi-squared test". 
 
-
-We performed a profiling using "gtable" which allows us to check the proportions of
-each category visually and numerically, as it performs a "Pearson's Chi-squared test"
-for each variable.
-
-For each variable, the most relevant conclusions are:
--gender:
-
-```{r}
+```{r, results='hide'}
+# Analysis of all variables except the ID
 profiling(df[-1], df$Churn, "Churn")
 ```
 
+For each variable, the most relevant conclusions are:
+- Some variables are not significant, like Gender (p=0.4866) or Phone service (p=0.3388). Consequently, if a costumer is going to churn is independent of the gender and whether he has a phone service or not
+
+- There are variables like "MultipleLines" that even if are significant (p=0.003464) the difference among levels is small as we can see in the plots
+
+```{r, echo=FLASE}
+profiling(df[8], df$Churn, "Churn")
+```
+
+- The rest of variables, including discretized variables, have an small p value (< 2.2e-16) and there is at least one level that has big differences of the proportions with the target. For example, people that do not have an online backup churned 40% while having the backup reduce the number to 21%.
+
+```{r, echo=FLASE}
+profiling(df[11], df$Churn, "Churn")
+```
 
 ## Feature Selection
 Lastly, we decided which variables were suitable to be included in the model. 
 
-Firstly, we removed the "id" as we consider that it will not give us any useful knowledge or be useful to predict the target. Secondly, we computed the relationship of variables against the target.
+Initially, we removed the "id" as we consider that it will not give us any useful knowledge or be useful to predict the target. 
 
 ```{r}
 # customerID should be removed
 df$customerID <- NULL
+```
 
-# Execute catdes function to find the correlation between the variables 
-# against our qualitative target Churn.
-res.cat = catdes(df, 20)
+Secondly, we computed the relationship of variables against the target:
 
-# Through sqrt_chi test, we can rank the most influential feature.
+-For categorical variables all p values are very low, less than 0.001, but the 6 variables with the lowest value are Contract, OnlineSecurity, TechSupport, c.tenure, InternetService, PaymentMethod. Note that the list includes one discrete variable.
+
+```{r}
+# Dind the correlation between the variables against our qualitative target Churn.
+res.cat = catdes(df, 21)
+
+# Most important categorical variables, sorted by p value
 res.cat$test.chi2
+```
 
-# The outcome of Chi sqrt test proved that all the categorical feature are meanfull (p-value > 0.05)
-# The key feature are the "Contract" period type, followed by "OnlineSecurity" and the "TechSupport".
+- For the numeric variables "tenure" has the lowest p value, much lower than the discrete version. However, using one or the other will be decided in the modelling process. Additionally, in a previous section, we decided that the model will only include "MonthlyCharges" and "tenure" or "TotalCharges", as there is a high correlation among them. 
 
+```{r}
 res.cat$quanti.var
-# And the correlation of numerical variable are also important.
+```
+
+Lastly, we decided to make an extensive profiling for the six categorical variables that we could use in the model in order to understand them better. The main conclusions for each variable are:
+
+-Contract: The probability to churn is decreased when the contract term increases. For example, if a costumer has a month contract and changes it to an annual the probability of not churning increases from 0.60 to 0.89.
+
+-InternetService: People that do not have an internet service tend not to churn (92%). However, if they had a Fiber optic connection, the probability to churn gets higher (41%). This could be explained as users that use internet think that there are other companies than a better offer than the current one, but it would be necessary to make a market analysis to validate this hypothesis.
+
+-OnlineSecurity: The probability to churn is reduced when the costumer has online security. However, having an internet connection seems a more interesting feature than the variable as "No internet service" level has a more important change of proportions than the other levels. 
+
+-TechSupport: Having a tech support increases the probability not to churn from 60% to 84%, but having internet or not is, again, a more relevant feature.
+
+-c.tenure: Loyalty is important as people tend to churn less when they have stayed more months in the company. For example, if people have less than 1.5 they churned 44% of times, but with more than 4.5 years they churned only 0.7%.
+
+-PaymentMethod: The proportion of people that churned is very similar in all the types of payment except for the electronic check. In this payment, the proportion to churn increases to 45% respect the 20% of other payments. 
+
+```{r}
+# Calculate the indexes of the variables to investigate
+names = c("Contract", "OnlineSecurity", "TechSupport", "c.tenure", "InternetService", "PaymentMethod")
+index = NULL
+
+for (i in 1:length(names)) {
+  ind = grep(names[i], colnames(df))
+  print(ind)
+  index = append(index, ind)
+}
+
+index = append(index, 21);
+
+# Profiling of only those variables
+res.cat2 = catdes(df[,index], 7)
+
+res.cat2$category
+
+# Another visualization of the profiling
+#profiling(df[,index], df$Churn, "Churn")
 ```
 
 # 3. Modeling 
+
+
 
 
 # 3.1. Using only using numeric variables
@@ -437,6 +488,7 @@ The AIC criteria shows that using numerical variables or discretized variables c
 ```{r}
 # Next step is to do the net-effect.
 ```
+
 
 
 
