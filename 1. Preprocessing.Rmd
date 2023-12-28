@@ -42,7 +42,7 @@ summary(df)
 
 # 1. Data preparation
 
-The first part of the project consisted on doing some basic data preparation to ensure that data was ready for the next sections.
+The first part of the project consisted on doing some basic data preparation to ensure that data are ready for the next sections.
 
 Firstly, we cheeked that all datatypes were consistent with the metadata and declared "SeniorCitizen" as a factor, as it represented a qualitative concept.
 
@@ -290,7 +290,7 @@ length(outliers)
 length(outliers)/dim(df)[1]*100
 ```
 
-# Profiling and feature selection
+# 5. Profiling and feature selection
 
 ## Numeric variables
 Firstly, we analysed the pearson correlation coefficient to detect variables that were highly related and not include them in the model. We have also included two variables "n.na", that contained the total number missing values per individual. Note that, as there are not any outliers or errors, it makes no sense to define those variables as it would be a vector of 0's with, obviously, no correlation with other variables.
@@ -348,7 +348,7 @@ Secondly, we computed the relationship of variables against the target:
 
 ```{r}
 # Dind the correlation between the variables against our qualitative target Churn.
-res.cat = catdes(df, 21)
+res.cat = catdes(df, 20)
 
 # Most important categorical variables, sorted by p value
 res.cat$test.chi2
@@ -366,7 +366,7 @@ Lastly, we decided to make an extensive profiling for the six categorical variab
 
 -InternetService: People that do not have an internet service tend not to churn (92%). However, if they had a Fiber optic connection, the probability to churn gets higher (41%). This could be explained as users that use internet think that there are other companies than a better offer than the current one, but it would be necessary to make a market analysis to validate this hypothesis.
 
--OnlineSecurity: The probability to churn is reduced when the costumer has online security. However, having an internet connection seems a more interesting feature than the variable as "No internet service" level has a more important change of proportions than the other levels. 
+-OnlineSecurity: The probability to churn is reduced when the costumer has online security. However, having an internet connection seems a more interesting feature than the variable as "No internet service" level has a more important change of proportions than the other levels.
 
 -TechSupport: Having a tech support increases the probability not to churn from 60% to 84%, but having internet or not is, again, a more relevant feature.
 
@@ -396,13 +396,9 @@ res.cat2$category
 #profiling(df[,index], df$Churn, "Churn")
 ```
 
-# 3. Modeling 
+# 6. Modeling 
 
-
-
-
-# 3.1. Using only using numeric variables
-
+## Data splitting
 ```{r}
 # First, let's split the dataset into training and testing. 
 # We can consider that 70% of data will be used for training purpose.
@@ -414,81 +410,121 @@ train = subset(df, sampling == TRUE)
 test = subset(df, sampling == FALSE)
 ```
 
-
+## Modelling only with numerical variables.
 ```{r}
-# Modelling with only numerical variables.
+# As we mentioned, there is a strong correlation between {tenure, MonthlyCharges}
+# and {TotalCharges}, as the second is simply the product of first set.
 
-m0.numerical = glm (Churn ~ tenure + TotalCharges, data = train, family = binomial)
+m0.set1 = glm (Churn ~ tenure + MonthlyCharges, data = train, family = binomial)
+# Checking the Anova test, both variable are significant to our model.
+# Hence, we cannot remove any of them.
+Anova(m0.set1, test = "LR")
 
-summary(m0.numerical)
+m0.set2 = glm (Churn ~ TotalCharges, data = train, family = binomial)
 
-# Checking the Anova test, there is no variable removed, which means that all of then are relevant.
-Anova (m0.numerical)
+# Checking the Akaike's criterion, the set {tenure, MonthlyCharges} 
+# has much lower value. Hence, we'll choose this for further analysis.
+AIC(m0.set1, m0.set2)
+BIC(m0.set1, m0.set2)
 ```
 
 ```{r}
 # Check the possible transformation for the previous model
 
-train_positive = replace(train, train == 0, 1e-6)
-train_positive$Churn == as.numeric(train$Churn)
+m0.log = glm (Churn ~ tenure + log(MonthlyCharges), data = train, family = binomial)
+m0.sqrt = glm (Churn ~ tenure + sqrt(MonthlyCharges), data = train, family = binomial)
 
-
-boxcox(Churn ~ tenure + TotalCharges, data = train_positive)
-boxTidwell(Churn ~ tenure + TotalCharges, data = train_positive)
+# AIC shows that the model without transformation is better.
+AIC (m0.set1, m0.log, m0.sqrt)
 ```
 
 ```{r}
+# Adding up categorical variables {c.tenure}
+m1 = glm (Churn ~ c.tenure + MonthlyCharges, data = train, family = binomial)
 
+AIC(m1, m0.set1)
+BIC(m1, m0.set1)
+# Checking the AIC and BIC parameter, we decided to keep the tenure numerical, without discretization.
+```
 
-m1 = glm (Churn ~ tenure + log(TotalCharges), data = train, family = binomial)
+```{r}
+# Adding up categorical variables {Contract}
+m2 = glm (Churn ~ tenure + TotalCharges + Contract, 
+          data = train, family = binomial)
+
+summary(m2)
+
+AIC(m0.set1, m2)
+```
+
+Based on the Catdes, the most related variable is OnlineSecurity, but we have figured out
+in the Profiling part that the InternetService has bigger impact on the Churn.
+The InternetService with "No" level is much more important than OnlineSecurity.
+```{r}
+# Adding up categorical variables {InternetService}
+m3 = glm (Churn ~ tenure + TotalCharges + Contract + InternetService, 
+          data = train, family = binomial)
+
+m3.i = glm (Churn ~ tenure + TotalCharges + Contract + OnlineSecurity, 
+          data = train, family = binomial)
+summary(m3)
+
+AIC(m3.i,m3)
+```
+
+```{r}
+# Adding up categorical variables {OnlineSecurity}
+m4 = glm (Churn ~ tenure + TotalCharges + Contract + InternetService + OnlineSecurity, 
+          data = train, family = binomial)
+
+AIC(m3.i,m3, m4)
+BIC(m3.i,m3, m4)
+```
+
+```{r}
+# Adding up categorical variable {PaymentMethod}
+m5 = glm (Churn ~ tenure + TotalCharges + Contract + InternetService + PaymentMethod, 
+          data = train, family = binomial)
+
+m5.i = glm (Churn ~ tenure + TotalCharges + Contract + InternetService + OnlineSecurity + TechSupport + PaymentMethod, 
+          data = train, family = binomial)
+
+BIC(m5, m5.i)
+
+# The model m5.i has NA, as for the people who don't have internet service, both
+# TechSupport and OnlineSecurity are not applicable.
+summary(m5.i)
+summary(m5)
+
+step(m5)
 ```
 
 
 
-
-
-
-
-
-
+                       p.value df
+Contract         5.863038e-258  2
+OnlineSecurity   2.661150e-185  2
+TechSupport      1.443084e-180  2
+c.tenure         4.192004e-178  3
+InternetService  9.571788e-160  2
+PaymentMethod    3.682355e-140  3
+OnlineBackup     2.079759e-131  2
+DeviceProtection 5.505219e-122  2
+StreamingMovies   2.667757e-82  2
+StreamingTV       5.528994e-82  2
+c.MonthlyCharges  8.977393e-72  3
+PaperlessBilling  2.614597e-58  1
+Dependents        3.276083e-43  1
+c.TotalCharges    3.057813e-39  3
+SeniorCitizen     9.477904e-37  1
+Partner           1.519037e-36  1
+MultipleLines     3.464383e-03  2
 
 
 
 ```{r}
-m0.discrete = glm (Churn ~ c.tenure + c.TotalCharges, data = train, family = binomial)
-
-summary (m0.discrete)
-
-Anova (m0.numerical)
+library(DescTools)
+PseudoR2(m2, which = "McFadden")
 ```
-
-
-```{r}
-# The first model will be with all the ORIGINAL variables.
-
-m0 = glm (Churn ~., data = train[,1:20], family = binomial)
-summary(m0)
-
-# The second model will be with all the categorical variable, including the discretized value (the numerical's ones).
-
-m0.c = glm (Churn ~., data = train[,-c(5,18,19)], family = binomial)
-summary(m0.c)
-
-# Compare the difference of these two model with AIC criteria.
-AIC (m0, m0.c)
-
-# The AIC parameter for both model are quite similar, although the m0 is slightly better. Hence, we'll use the original dataset, without discretizing the numerical variable.
-
-# As the two model are not nested, we cannot apply the anova test
-# anova (m0, m0.c, test = "Chisq")
-```
-
-The AIC criteria shows that using numerical variables or discretized variables cannot make much difference. In this situation, in order to reduce the workload, we decided to use the discretized variables (hence, we'll have only categorical variable)
-
-```{r}
-# Next step is to do the net-effect.
-```
-
-
 
 
