@@ -400,7 +400,7 @@ res.cat2$category
 
 ## Data splitting
 ```{r}
-# First, let's split the dataset into training and testing. 
+# First, let's split the dataset into training and testing set. 
 # We can consider that 70% of data will be used for training purpose.
 
 set.seed(123)
@@ -413,118 +413,189 @@ test = subset(df, sampling == FALSE)
 ## Modelling only with numerical variables.
 ```{r}
 # As we mentioned, there is a strong correlation between {tenure, MonthlyCharges}
-# and {TotalCharges}, as the second is simply the product of first set.
+# and {TotalCharges}, as the second one is simply the product of first set.
 
 m0.set1 = glm (Churn ~ tenure + MonthlyCharges, data = train, family = binomial)
 # Checking the Anova test, both variable are significant to our model.
-# Hence, we cannot remove any of them.
+# Hence, we won't remove any of them.
 Anova(m0.set1, test = "LR")
 
 m0.set2 = glm (Churn ~ TotalCharges, data = train, family = binomial)
 
-# Checking the Akaike's criterion, the set {tenure, MonthlyCharges} 
+# Checking the Bayesian criterion, the set {tenure, MonthlyCharges} 
 # has much lower value. Hence, we'll choose this for further analysis.
-AIC(m0.set1, m0.set2)
 BIC(m0.set1, m0.set2)
 ```
 
 ```{r}
-# Check the possible transformation for the previous model
+# Checking possible transformation for previous model
 
 m0.log = glm (Churn ~ tenure + log(MonthlyCharges), data = train, family = binomial)
-m0.sqrt = glm (Churn ~ tenure + sqrt(MonthlyCharges), data = train, family = binomial)
+m0.sqrt = glm (Churn ~ sqrt(tenure) + MonthlyCharges, data = train, family = binomial)
 
-# AIC shows that the model without transformation is better.
-AIC (m0.set1, m0.log, m0.sqrt)
+# We have tried several transformations for both variable, but AIC shows that 
+# the best model is the one with sqrt on the tenure.
+BIC (m0.set1, m0.log, m0.sqrt)
 ```
 
 ```{r}
-# Adding up categorical variables {c.tenure}
+# Comparing categorical variables {c.tenure}. We'll like to make an comparison 
+# between different kind of tenure (numerical and discretized)
 m1 = glm (Churn ~ c.tenure + MonthlyCharges, data = train, family = binomial)
 
-AIC(m1, m0.set1)
-BIC(m1, m0.set1)
+BIC(m1, m0.sqrt)
 # Checking the AIC and BIC parameter, we decided to keep the tenure numerical, without discretization.
 ```
 
-```{r}
-# Adding up categorical variables {Contract}
-m2 = glm (Churn ~ tenure + TotalCharges + Contract, 
-          data = train, family = binomial)
+```{r, results= 'hide'}
+# Check the influential plot
+influent = influencePlot(m0.sqrt)[3]; influent
 
-summary(m2)
+# Calculate D's threshold
+D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
 
-AIC(m0.set1, m2)
-```
-
-Based on the Catdes, the most related variable is OnlineSecurity, but we have figured out
-in the Profiling part that the InternetService has bigger impact on the Churn.
-The InternetService with "No" level is much more important than OnlineSecurity.
-```{r}
-# Adding up categorical variables {InternetService}
-m3 = glm (Churn ~ tenure + TotalCharges + Contract + InternetService, 
-          data = train, family = binomial)
-
-m3.i = glm (Churn ~ tenure + TotalCharges + Contract + OnlineSecurity, 
-          data = train, family = binomial)
-summary(m3)
-
-AIC(m3.i,m3)
+# The cook's distance obtained from influence plot are smaller than
+# the threshold, hence, we won't remove any point.
 ```
 
 ```{r}
-# Adding up categorical variables {OnlineSecurity}
-m4 = glm (Churn ~ tenure + TotalCharges + Contract + InternetService + OnlineSecurity, 
+# Adding categorical variables {Contract}
+m2 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract, 
           data = train, family = binomial)
 
-AIC(m3.i,m3, m4)
-BIC(m3.i,m3, m4)
+# Adding the {contract} to our model reduce the BIC.
+BIC(m0.sqrt, m2)
 ```
 
 ```{r}
-# Adding up categorical variable {PaymentMethod}
-m5 = glm (Churn ~ tenure + TotalCharges + Contract + InternetService + PaymentMethod, 
+# Adding categorical variables  {InternetService}
+m3 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService, 
           data = train, family = binomial)
 
-m5.i = glm (Churn ~ tenure + TotalCharges + Contract + InternetService + OnlineSecurity + TechSupport + PaymentMethod, 
-          data = train, family = binomial)
+BIC(m2,m3)
+```
 
-BIC(m5, m5.i)
+We have figured out in the profiling section that {InternetService} and {OnlineSecurity, TechSupport} have some level that are strongly correlated.
+In the case that of "No Internet Service"
 
-# The model m5.i has NA, as for the people who don't have internet service, both
-# TechSupport and OnlineSecurity are not applicable.
-summary(m5.i)
+in common one level which is "No" internet service, the {OnlineSecurity} and 
+{TechSupport} are also None.
+
+Hence, to avoid NA's variables in the model, we've decided to keep
+{InternetService} as this one is more correlated with target variable {Churn}
+and the difference of BIC is not that significant.
+
+```{r}
+# Adding categorical variables {TechSupport} and {OnlineSecurity}
+m4 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + OnlineSecurity 
+          + TechSupport, data = train, family = binomial)
+
+BIC(m3, m4)
+```
+
+```{r}
+# Adding categorical variable {PaymentMethod}
+m5 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
+          + PaymentMethod, data = train, family = binomial)
+
+BIC(m3, m5)
+
 summary(m5)
+```
 
-step(m5)
+```{r, results= 'hide'}
+# Check the influential plot before removing the influential observation.
+influent = influencePlot(m5)[3]; influent
+
+# Calculate D's threshold
+D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
+
+# The cook's distance obtained from influence plot are smaller than
+# the threshold, hence, we won't remove any point.
+```
+
+```{r}
+# Check all the possible interactions of model m5.
+m6 = glm (Churn ~ (sqrt(tenure) + MonthlyCharges + Contract + InternetService
+          + PaymentMethod)^2, data = train, family = binomial)
+
+step(m6)
+
+```
+
+                                 Df Deviance    AIC
+<none>                                4022.7 4068.7
+- sqrt(tenure):PaymentMethod      3   4031.4 4071.4
+- sqrt(tenure):Contract           2   4033.0 4075.0
+- MonthlyCharges:Contract         2   4035.2 4077.2
+- Contract:InternetService        4   4042.4 4080.4
+- MonthlyCharges:InternetService  2   4055.1 4097.1
+
+```{r}
+# Check the interaction between sqrt(tenure):PaymentMethod and
+# sqrt(tenure):Contract
+m7 = glm(Churn ~ sqrt(tenure) * PaymentMethod + sqrt(tenure) * Contract +
+          MonthlyCharges + InternetService + PaymentMethod, data = train, 
+          family = binomial)
+
+BIC (m5, m7)
+```
+
+```{r}
+# Check the interaction between MonthlyCharges and InternetService
+m8 = glm(Churn ~ sqrt(tenure) +  Contract + MonthlyCharges * InternetService 
+         + PaymentMethod, data = train, family = binomial)
+
+BIC(m5,m7,m8)
+
+summary(m8)
+```
+
+```{r}
+# Check the effect of linked function
+m9 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
+          + PaymentMethod, data = train, family = binomial(link = "probit"))
+
+# Based on BIC criterion, no improvement is obtained.
+BIC(m5, m9)
+
+```
+
+```{r}
+influencePlot(m9)
+
+# Observation 269 and 4273 may be an influential point, but both of them
+# are smaller than threshold.
 ```
 
 
+```{r}
+# Goodness of fit
 
-                       p.value df
-Contract         5.863038e-258  2
-OnlineSecurity   2.661150e-185  2
-TechSupport      1.443084e-180  2
-c.tenure         4.192004e-178  3
-InternetService  9.571788e-160  2
-PaymentMethod    3.682355e-140  3
-OnlineBackup     2.079759e-131  2
-DeviceProtection 5.505219e-122  2
-StreamingMovies   2.667757e-82  2
-StreamingTV       5.528994e-82  2
-c.MonthlyCharges  8.977393e-72  3
-PaperlessBilling  2.614597e-58  1
-Dependents        3.276083e-43  1
-c.TotalCharges    3.057813e-39  3
-SeniorCitizen     9.477904e-37  1
-Partner           1.519037e-36  1
-MultipleLines     3.464383e-03  2
+# Residual plot
 
+residualPlots(m5)
+
+
+```
+
+
+```{r}
+# Model prediction. NOT WORKING NOW
+
+predictions = predict(object = m5, newdata = test)
+
+CM = table(test$Churn, predictions$class, dnn = c("Actual Churn", "Predicted Churn")); CM
+
+accuracy = sum(diag(CM))/dim(dcon)[1]*100; accuracy
+
+roc.curve(dcon$target, predictions$class)
+```
 
 
 ```{r}
 library(DescTools)
-PseudoR2(m2, which = "McFadden")
+PseudoR2(m5, which = "McFadden")
 ```
 
 
