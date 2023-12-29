@@ -30,6 +30,7 @@ library(caTools)
 library(chemometrics)
 library(corrplot)
 source("profiling_func.R")
+library(ROSE)
 ```
 
 ```{r}
@@ -414,6 +415,7 @@ test = subset(df, sampling == FALSE)
 ```{r}
 # As we mentioned, there is a strong correlation between {tenure, MonthlyCharges}
 # and {TotalCharges}, as the second one is simply the product of first set.
+# So we will build two model with different data set, and keep the best one.
 
 m0.set1 = glm (Churn ~ tenure + MonthlyCharges, data = train, family = binomial)
 # Checking the Anova test, both variable are significant to our model.
@@ -428,13 +430,13 @@ BIC(m0.set1, m0.set2)
 ```
 
 ```{r}
-# Checking possible transformation for previous model
+# Checking possible transformation for previous model m0.set1
 
 m0.log = glm (Churn ~ tenure + log(MonthlyCharges), data = train, family = binomial)
 m0.sqrt = glm (Churn ~ sqrt(tenure) + MonthlyCharges, data = train, family = binomial)
 
-# We have tried several transformations for both variable, but AIC shows that 
-# the best model is the one with sqrt on the tenure.
+# We have tried several transformations for both variable (sqrt, log, exp, etc),
+# but BIC shows that the best model is the one with sqrt on the tenure.
 BIC (m0.set1, m0.log, m0.sqrt)
 ```
 
@@ -445,6 +447,9 @@ m1 = glm (Churn ~ c.tenure + MonthlyCharges, data = train, family = binomial)
 
 BIC(m1, m0.sqrt)
 # Checking the AIC and BIC parameter, we decided to keep the tenure numerical, without discretization.
+
+# We have checked alternately by changing MonthlyCharges to discretized, but
+# the AIC also get worse.
 ```
 
 ```{r, results= 'hide'}
@@ -454,8 +459,8 @@ influent = influencePlot(m0.sqrt)[3]; influent
 # Calculate D's threshold
 D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
 
-# The cook's distance obtained from influence plot are smaller than
-# the threshold, hence, we won't remove any point.
+# Cook's distance obtained from influence plot are smaller than
+# threshold, hence, we won't remove any point.
 ```
 
 ```{r}
@@ -463,27 +468,25 @@ D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
 m2 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract, 
           data = train, family = binomial)
 
-# Adding the {contract} to our model reduce the BIC.
+# Adding {contract} indeed reduce BIC of our model.
 BIC(m0.sqrt, m2)
 ```
 
 ```{r}
-# Adding categorical variables  {InternetService}
+# Adding categorical variables {InternetService}
 m3 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService, 
           data = train, family = binomial)
 
+# Adding {InternetService} indeed reduce BIC of our model.
 BIC(m2,m3)
 ```
 
-We have figured out in the profiling section that {InternetService} and {OnlineSecurity, TechSupport} have some level that are strongly correlated.
-In the case that of "No Internet Service"
+We have figured out in profiling section that {InternetService} and {OnlineSecurity, TechSupport} have some level that are strongly correlated.
+In case that {Internet Service} = "No", {OnlineSecurity} and {TechSupport} 
+are also None ("No intervet service").
 
-in common one level which is "No" internet service, the {OnlineSecurity} and 
-{TechSupport} are also None.
-
-Hence, to avoid NA's variables in the model, we've decided to keep
-{InternetService} as this one is more correlated with target variable {Churn}
-and the difference of BIC is not that significant.
+Hence, to avoid dependency and NA's features in the model, we'll need to
+decide which one to keep
 
 ```{r}
 # Adding categorical variables {TechSupport} and {OnlineSecurity}
@@ -491,6 +494,11 @@ m4 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + OnlineSecurity
           + TechSupport, data = train, family = binomial)
 
 BIC(m3, m4)
+
+# The BIC criterion for m4 is smaller, but taking into account that
+# {InternetService} is more correlated with target variable {Churn} 
+# and the difference of BIC is not that significant. we decided to keep
+# m3, with {InternetService}.
 ```
 
 ```{r}
@@ -498,20 +506,19 @@ BIC(m3, m4)
 m5 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod, data = train, family = binomial)
 
+# Adding {PaymentMethod} indeed reduce BIC of our model.
 BIC(m3, m5)
-
-summary(m5)
 ```
 
 ```{r, results= 'hide'}
-# Check the influential plot before removing the influential observation.
+# Check influential plot before removing influential observation.
 influent = influencePlot(m5)[3]; influent
 
 # Calculate D's threshold
 D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
 
-# The cook's distance obtained from influence plot are smaller than
-# the threshold, hence, we won't remove any point.
+# Cook's distance obtained from influence plot are smaller than
+# threshold, hence, we won't remove any point.
 ```
 
 ```{r}
@@ -519,8 +526,8 @@ D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
 m6 = glm (Churn ~ (sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod)^2, data = train, family = binomial)
 
+# Use step function to find the combination with minimun AIC. 
 step(m6)
-
 ```
 
                                  Df Deviance    AIC
@@ -538,6 +545,7 @@ m7 = glm(Churn ~ sqrt(tenure) * PaymentMethod + sqrt(tenure) * Contract +
           MonthlyCharges + InternetService + PaymentMethod, data = train, 
           family = binomial)
 
+# Based on BIC criterion, no improvement is obtained.
 BIC (m5, m7)
 ```
 
@@ -546,8 +554,10 @@ BIC (m5, m7)
 m8 = glm(Churn ~ sqrt(tenure) +  Contract + MonthlyCharges * InternetService 
          + PaymentMethod, data = train, family = binomial)
 
-BIC(m5,m7,m8)
+# BIC improved from 4174 to 4164, but with the cost of 2 degree of freedom.
+BIC(m5,m8)
 
+# It's a trade-off between simpleness of the model and the accuracy.
 summary(m8)
 ```
 
@@ -558,7 +568,6 @@ m9 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
 
 # Based on BIC criterion, no improvement is obtained.
 BIC(m5, m9)
-
 ```
 
 ```{r}
@@ -576,20 +585,25 @@ influencePlot(m9)
 
 residualPlots(m5)
 
-
 ```
 
+# Model prediction
 
 ```{r}
-# Model prediction. NOT WORKING NOW
+# First, we compute the probability of Churn for each observation (from test) 
+# with predict function.
+predictions = predict(m5, test, type = "response")
 
-predictions = predict(object = m5, newdata = test)
+# Then, for those that have a probability higher than 0.5, we can consider
+# Churn == "Yes"
+probability = ifelse(predictions >= 0.5, "Yes", "No")
 
-CM = table(test$Churn, predictions$class, dnn = c("Actual Churn", "Predicted Churn")); CM
+# Finally, compute the Confusion Matrix of predicted result.
+CM = table(test$Churn, probability, dnn = c("Actual Churn", "Predicted Churn")); CM
 
-accuracy = sum(diag(CM))/dim(dcon)[1]*100; accuracy
+accuracy = sum(diag(CM))/dim(test)[1]*100; accuracy
 
-roc.curve(dcon$target, predictions$class)
+roc.curve(test$Churn, probability)
 ```
 
 
