@@ -16,8 +16,9 @@ editor_options:
 
 - Residual analysis at the end of the project.
 - Profiling: AN EXTRA POINT TO BE DONE. WE CAN DO IT LATTER. USE THE SCRIPT PROVIDED BY MVA.
+- SI GENEREM UN WORD, L'HEM DE JUSTIFICAR ABANS DE CONVERTIR A PDF.
 
-
+# 0. Introduction
 
 In this project, we will study the data set "Telco Customer Churn", which can be found at https://www.kaggle.com/datasets/blastchar/telco-customer-churn. Our goal is to analyze the correlation between the amount of customers who left within the last month (Churn) and different features that describe the customer and the services he/she/they has signed up for. Then, we will build a logistic model that will allow us to predict the variable Churn.
 
@@ -38,16 +39,21 @@ source("profiling_func.R")
 library(ROSE)
 ```
 
-We start importing the dataset.
-
-```{r Import dataset}
+```{r Import dataset, echo=F, message=FALSE, warning=FALSE, results='hide'}
 df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls",header=T, sep=",",
               stringsAsFactors=TRUE)
+
+head(df)
+```
+
+We start by taking a first general look at the dataset.
+
+```{r First look at df}
 str(df)
 summary(df)
 ```
 
-The data set contains 7043 observations of 21 variables.
+The data set contains `r dim(df)[1]` observations of `r dim(df)[2]` variables.
 
 # 1. Data preparation
 
@@ -143,11 +149,11 @@ EDA was done mainly automatically using the "DataExplorer" library. It plots, fo
 The main conclusions of this section are:
 1- Using the QQ plots and distribution plots we see that no numerical variable is normally distributed. This was also checked visually and with Kolmogorov-Smirnov tests, a more suitable approach than Shappiro-Wilk for large samples.
 
-2- Our database is not balanced in some categories, like PhoneService (9% of "No") or SeniorCitizen(16% of "No"). This is specially relevant for the target, "Churn", that has 30% of cases of "No", so individuals that churned will be more difficult to predict.
+2- Our database is not balanced in some categories, like PhoneService (`r round(prop.table(table(df$PhoneService))["No"]*100,0)`% of "No") or SeniorCitizen(`r round(prop.table(table(df$SeniorCitizen))["No"]*100,0)`% of "No"). This is specially relevant for the target, "Churn", that has `r round(prop.table(table(df$Churn))["No"]*100,0)`% of cases of "No", so individuals that churned will be more difficult to predict.
 
 3- Qualitative variables have a maximum of 4 levels, so all of them may be suitable for modeling without any aggregation.
 
-5- Some categories, like "OnlineSecurity" or "OnlineBackup", are not applicable if the client does not have an internet connection. Consequently, there is a special level for those cases that contains around 30% of the clients. 
+5- Some categories, like "OnlineSecurity" or "OnlineBackup", are not applicable if the client does not have an internet connection. Consequently, there is a special level for those cases that contains around `r round(prop.table(table(df$InternetService))["No"]*100,0)`% of the clients. 
 
 ```{r EDA}
 # Basic EDA
@@ -228,9 +234,11 @@ plot(expected_total_charges, df$TotalCharges)
 Thirdly, we analysed univariate outliers in numeric variables using Boxplots and the typical thresholds: 1.5 * IQR(interquartile range) for mild outliers and 3 * IQR for severe outliers. As there were not any we considered that all points were suitable for our models.
 
 ```{r Boxplots}
+par(mfrow=c(1, length(numeric_val_idx)))
 for (var in as.numeric(numeric_val_idx)) {
   Boxplot(df[,var], ylab = names(df)[var], main = "Boxplot") 
 }
+par(mfrow=c(1,1))
 ```
 
 ## 3.1 In depth analysis of missing values
@@ -276,7 +284,7 @@ We can compute as well the pearson correlation coefficient between "n.na" and th
 corr_mat <- cor(df[,c(numeric_val_idx, 25)],)
 corr_mat
 
-corrplot(corr_mat, order = 'hclust')
+corrplot(corr_mat, order = 'hclust', tl.cex = 0.9)
 ```
 
 n.na is independent to the rest of numerical variables, probably because it evaluates to 0 in most observations.
@@ -295,7 +303,7 @@ set.seed(123)
 res.mout <- Moutlier(df[,numeric_val_idx], quantile = 0.95, plot= FALSE)
 
 # Visual representation
-par(mfrow=c(1,2))
+par(mfrow=c(1,2), cex.main=0.8)
 plot(res.mout$md, col="lightblue", pch = 19, main = 'Detection of multivariable 
 outliers', xlab= 'Observation', 
      ylab ='Traditional Mahalanobis distance ')
@@ -304,7 +312,7 @@ abline(h = res.mout$cutoff, col = "red", lwd = 5, lty = 2)
 plot(res.mout$rd, col="lightblue", pch = 19, xlab= 'Observation', 
      ylab ='Robust Mahalanobis distance ')
 abline(h = res.mout$cutoff, col = "red", lwd = 5, lty = 2)
-par(mfrow=c(1,1))
+par(mfrow=c(1,1), cex.main=1)
 
 # Identification of the outliers
 outliers = which(res.mout$md>res.mout$cutoff & res.mout$rd > res.mout$cutoff) 
@@ -312,32 +320,36 @@ length(outliers)
 length(outliers)/dim(df)[1]*100
 ```
 
-# 5. Profiling and feature selection
+# 5. Profiling of the target and feature selection
 
-## Numeric variables
-We analysed the pearson correlation coefficient to detect variables that were highly related and not include them in the model. In the correlation plot of section 3.1 we see that "TotalCharges" is highly correlated with "MonthlyCharges" and "tenure" as the first one is calculated as the product of the others.
+## Numeric variables' correlations
+We analysed the pearson correlation coefficient to detect variables that were highly related and not include them all in the model. In the correlation plot of section 3.1 we see that "TotalCharges" is highly correlated with "MonthlyCharges" and "tenure" as the first one is calculated as the product of the others.
 
-## Categorical variables
-Later on, we profiled the target Churn using "gtable". This method checks whether there are significant differences between the levels of each categorical variable and the target. We get both plots and the Pearson's Chi-squared test's results. 
+## Profiling of the target
+Later on, we profiled the target Churn using a custom function "profiling()" created in the Multivariate Analysis subject of the Master's degree. This method expands "catdes()" and performs many plots and tests according to the type of each variable. We will focus on plots and the given tests' results: Chi^2, ANOVA and Kruskal-Wallis.
 
-```{r, results='hide'}
+```{r Karinas profiling method, results='hide'}
 # Analysis of all variables except the ID
-profiling(df[-1], df$Churn, "Churn")
+profiling(df[-c(1, grep("Churn", names(df)))], df$Churn, "Churn")
 ```
 
-For each variable, the most relevant conclusions are:
-- Some variables are not significant, like Gender (p=0.4866) or Phone service (p=0.3388). Consequently, if a costumer is going to churn is independent of the gender and whether he has a phone service or not
+The most relevant conclusions are:
+- Some variables are not significant, like Gender (Chi^2 p-value=0.4866) or Phone service (Chi^2 p-value=0.3388). Consequently, we state that churn is independent of the client's gender and whether he/she/they has a phone service contracted.
 
-- There are variables like "MultipleLines" that even if are significant (p=0.003464) the difference among levels is small as we can see in the plots
-
-```{r, echo=FLASE}
-profiling(df[8], df$Churn, "Churn")
+```{r targets profiling with gender and PhoneService, echo=F}
+profiling(df[c(grep("gender", names(df)),grep("PhoneService", names(df)))], df$Churn, "Churn")
 ```
 
-- The rest of variables, including discretized variables, have an small p value (< 2.2e-16) and there is at least one level that has big differences of the proportions with the target. For example, people that do not have an online backup churned 40% while having the backup reduce the number to 21%.
+- There are variables like "MultipleLines" that even being significant (Chi^2 p-value=0.003464) the difference among levels is small, as we can see in the plots
 
-```{r, echo=FLASE}
-profiling(df[11], df$Churn, "Churn")
+```{r targets profiling with MultipleLines, echo=F}
+profiling(df[grep("MultipleLines", names(df))], df$Churn, "Churn")
+```
+
+- The rest of variables, including the discretized, have a small p-value (< 2.2e-16) in the Chi^2, ANOVA or Kruskal-Wallis test, according to their type, and have at least one level where the target's distribution is different than in the rest. For example, 40% of people that did not have an online backup churned, while only 22% of customers having the backup did.
+
+```{r targets profiling with OnlineBackup, echo=F}
+profiling(df[grep("OnlineBackup", names(df))], df$Churn, "Churn")
 ```
 
 ## Feature Selection
@@ -349,39 +361,44 @@ The id was removed, since it will not give us any knowledge nor be useful to pre
 df$customerID <- NULL
 ```
 
-We then computed the relationship between all variables and the target:
+We then computed the relationship between all the variables and the target with the "catdes()" method and chose the most relevant of them for the target's explanation.
 
-For categorical variables all p-values are very low, less than 0.001, but the 6 variables with the lowest value are Contract, OnlineSecurity, TechSupport, c.tenure, InternetService, PaymentMethod. Note that the list includes a discretized numerical variable.
+All p-values of the Chi-squared test for categorical variables are very low, less than 0.001. The 6 variables with the lowest p-value are Contract, OnlineSecurity, TechSupport, c.tenure, InternetService, PaymentMethod. Note that the list includes a discretized numerical variable.
 
 ```{r catdes categorical}
 # Correlation between all variables and our qualitative target Churn.
-res.cat = catdes(df, 20)
+res.cat = catdes(df, grep("Churn", names(df)))
 
 # Most important categorical variables, sorted by p value
 res.cat$test.chi2
 ```
 
-As for numeric variables, "tenure" has the lowest p-value, much lower than those of discrete variables. As we have already seen, there is a high correlation between "MonthlyCharges", "tenure" and "TotalCharges" so we will only include in the models "TotalCharges" or "MonthlyCharges" together with "tenure".
+As for numeric variables, "tenure" has the smallest p-value in the F-test, much lower than those of discrete variables. As we have already seen, there is a high correlation between "MonthlyCharges", "tenure" and "TotalCharges" so we will only include in the models "TotalCharges" or "MonthlyCharges" together with "tenure".
 
 ```{r catdes numerical}
 res.cat$quanti.var
 ```
 
-Lastly, we decided to make an extensive profiling for the six categorical variables that we could use in the model in order to understand them better. The main conclusions for each variable were:
+## Profiling of the target with the selected categorical features
+
+Lastly, we decided to make an extensive profiling of the six categorical variables that we could use in the model in order to understand them better. The main conclusions for each variable were:
 
 - Contract: The probability of churning is decreased when the contract term increases. For example, if a costumer has a month contract and changes it to an annual the probability of not churning increases from 0.58 to 0.89.
 
 - InternetService: People that do not have an internet service do not usually churn (7%). However, if they had a Fiber optic connection, the probability to churn increases (42%). This could be explained by the fact that users with a fast internet connection try to get the best offer for the service, but it would be necessary to make a market analysis to validate this hypothesis.
 
-- OnlineSecurity: The probability of churning is small when the customer has online security. However, having an internet connection seems a more interesting feature than the variable as "No internet service" level has a more important change of proportions than the other levels.
+- OnlineSecurity: The probability of churning is small when the customer has online security. However, having an internet connection or not seems a more interesting feature than the variable itself, as the "No internet service" level has the smallest p-value.
 
--TechSupport: Having a tech support increases the probability not to churn from 60% to 84%, but having internet or not is, again, a more relevant feature.
+- TechSupport: Having tech support increases the probability of not churning from 60% to 84% (when compared with not having it, although having internet service). Having internet service or not is, again, a more relevant feature.
 
--c.tenure: Loyalty is important as people tend to churn less when they have stayed more months in the company. For example, if people have less than 1.5 they churned 44% of times, but with more than 4.5 years they churned only 0.7%.
+- c.tenure: Loyalty is important, since people tend to churn less when they have spent longer with the service. For example, people who have spent less than 1.5 years has churned 44% of times, but only 8% of those who have stayed for more than 4.5 years have churned. 
 
--PaymentMethod: The proportion of people that churned is very similar in all the types of payment except for the electronic check. In this payment, the proportion to churn increases to 45% respect the 20% of other payments. 
+- PaymentMethod: The proportion of people that churned is very similar in all types of payment except for "Electronic check". In this level, the proportion of churns is 45%, 18% higher than the global average.
 
-```{r}
+```{r Extensive profiling of most relevant categorical variables}
+# Global proportions of Churn categories
+proportions(table(df$Churn))
+
 # Calculate the indexes of the variables to investigate
 names = c("Contract", "OnlineSecurity", "TechSupport", "c.tenure", "InternetService", "PaymentMethod")
 index = NULL
@@ -615,5 +632,8 @@ roc.curve(test$Churn, probability)
 library(DescTools)
 PseudoR2(m5, which = "McFadden")
 ```
+
+# Annex
+
 
 

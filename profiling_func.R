@@ -37,6 +37,8 @@ profiling <- function(df, P, nameP) {
   nc<-length(levels(P))
   pvalk <- matrix(data=0,nrow=nc,ncol=K, dimnames=list(levels(P),names(dades)))
   
+  par(cex.main=0.8)
+  
   for(k in 1:K){
     if (is.numeric(dades[,k])){ 
       print(paste("Anàlisi per classes de la Variable:", names(dades)[k]))
@@ -88,13 +90,16 @@ profiling <- function(df, P, nameP) {
         #for(c in 1:length(levels(dades[,k]))){lines(colperc[,c],col=paleta[c]) }
         
         #with legend
-        plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]))
+        plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of ", nameP,
+                                                  "'s levels globally and by ",
+                                                  names(dades)[k], sep=""),
+             ylab="Proportion")
         paleta<-rainbow(length(levels(dades[,k])))
         for(c in 1:length(levels(dades[,k]))){lines(colperc[,c],col=paleta[c]) }
-        legend("topright", levels(dades[,k]), col=paleta, lty=2, cex=0.6)
+        legend("topright", c("Global", levels(dades[,k])), col=c("black", paleta), lty=2, cex=0.6)
         
         #condicionades a classes
-        print(append("Categories=",levels(dades[,k])))
+        #print(append("Categories=",levels(dades[,k])))
         #plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]))
         #paleta<-rainbow(length(levels(dades[,k])))
         #for(c in 1:length(levels(dades[,k]))){lines(rowperc[,c],col=paleta[c]) }
@@ -107,7 +112,7 @@ profiling <- function(df, P, nameP) {
         
         #amb variable en eix d'abcisses
         marg <-table(dades[,k])/n
-        print(append("Categories=",levels(dades[,k])))
+        #print(append("Categories=",levels(dades[,k])))
         #plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), las=3)
         #x<-plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), xaxt="n")
         #text(x=x+.25, y=-1, adj=1, levels(CountryName), xpd=TRUE, srt=25, cex=0.7)
@@ -115,9 +120,12 @@ profiling <- function(df, P, nameP) {
         #  for(c in 1:length(levels(as.factor(P)))){lines(rowperc[c,],col=paleta[c]) }
         
         #with legend
-        plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), las=3)
+        plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of ",names(dades)[k],
+                                                  " globally and by ", nameP,
+                                                  "'s levels", sep=""),
+             ylab="Proportion")
         for(c in 1:length(levels(as.factor(P)))){lines(rowperc[c,],col=paleta[c])}
-        legend("topright", levels(as.factor(P)), col=paleta, lty=2, cex=0.6)
+        legend("topright", c("Global", levels(as.factor(P))), col=c("black", paleta), lty=2, cex=0.6)
         
         #condicionades a columna 
         #plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), las=3)
@@ -132,7 +140,7 @@ profiling <- function(df, P, nameP) {
         table<-table(dades[,k],P)
         print("Cross Table:")
         print(table)
-        print("Distribucions condicionades a columnes:")
+        print("Distributions by columns:")
         print(colperc)
         
         #diagrames de barres apilades                                         
@@ -149,10 +157,10 @@ profiling <- function(df, P, nameP) {
         #barplot(table(dades[,k], as.factor(P)), beside=TRUE,col=paleta)
         #legend("topright",levels(as.factor(dades[,k])),pch=1,cex=0.5, col=paleta)
         
-        print("Test Chi quadrat: ")
+        print("Chi^2 test: ")
         print(chisq.test(dades[,k], as.factor(P)))
         
-        print("valorsTest:")
+        print("ValorTestXquali:")
         print( ValorTestXquali(P,dades[,k]))
         #calcular els pvalues de les quali
       }
@@ -166,6 +174,7 @@ profiling <- function(df, P, nameP) {
       print(sort(pvalk[c,]), digits=3) 
     }
   }
+  par(cex.main=1)
   
   #afegir la informacio de les modalitats de les qualitatives a la llista de pvalues i fer ordenacio global
   
