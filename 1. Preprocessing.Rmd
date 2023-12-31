@@ -1,5 +1,5 @@
 ---
-title: "SIM Project 2. Preprocessing"
+title: "SIM. Assignment 2: Telco Customer Churn"
 author: "Adrià Casanova, Víctor Garcia, Zhengyong Ji"
 date: "2024-01-05"
 output:
@@ -15,10 +15,15 @@ editor_options:
 ---
 
 - Residual analysis at the end of the project.
-- Profiling: AN EXTRA POINT TO BE DONE. WE CAN DO IT LATTER. USE THE SCRIPT PROVIDED BY MVA. 
+- Profiling: AN EXTRA POINT TO BE DONE. WE CAN DO IT LATTER. USE THE SCRIPT PROVIDED BY MVA.
 
-```{r, echo=F, message=FALSE, warning=FALSE, results='hide'}
-# Clean the workspace
+
+
+In this project, we will study the data set "Telco Customer Churn", which can be found at https://www.kaggle.com/datasets/blastchar/telco-customer-churn. Our goal is to analyze the correlation between the amount of customers who left within the last month (Churn) and different features that describe the customer and the services he/she/they has signed up for. Then, we will build a logistic model that will allow us to predict the variable Churn.
+
+All members have contributed equally to all parts of the project.
+
+```{r Clean workspace. Load libraries, echo=F, message=FALSE, warning=FALSE, results='hide'}
 if(!is.null(dev.list())) dev.off()
 rm(list = ls())
 
@@ -33,31 +38,30 @@ source("profiling_func.R")
 library(ROSE)
 ```
 
-```{r}
-# Import the dataset. Previopusly we have imported the required libraries
+We start importing the dataset.
+
+```{r Import dataset}
 df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls",header=T, sep=",",
               stringsAsFactors=TRUE)
 str(df)
 summary(df)
 ```
 
+The data set contains 7043 observations of 21 variables.
+
 # 1. Data preparation
 
-The first part of the project consisted on doing some basic data preparation to ensure that data are ready for the next sections.
+The first part of the project consisted on doing some basic data preparation to ensure that data is ready for the next sections.
 
-Firstly, we cheeked that all datatypes were consistent with the metadata and declared "SeniorCitizen" as a factor, as it represented a qualitative concept.
+Firstly, we checked that all datatypes were consistent with the metadata and declared "SeniorCitizen" as a factor, as it represented a qualitative concept.
 
-```{r}
-# Transformation of "SeniorCitizen" to categorical
+```{r SeniorCitizen to categorical}
 df$SeniorCitizen <- factor(df$SeniorCitizen, labels = c("Yes", "No"))
 ```
 
-Secondly, we created discrete variables for all the numeric variables by splitting data into 4 categories. The limits of them were obtained simply by dividing the range in 4 equal intervals and the distribution was checked using histograms to ensure that it was similar to the original variable.
+Secondly, we discretized all numeric variables by splitting data into 4 categories. Their boundaries were obtained simply by dividing the total range in 4 equal intervals and the distribution was checked using histograms to ensure that they were similar to the original variables.
 
-```{r}
-# Discretize numerical variables
-
-# tenure
+```{r Discretize tenure}
 df$c.tenure <- df$tenure # Create a new variable called Categorical.tenure
 m.tenure <- max(df$tenure, na.rm = TRUE)
 df$c.tenure <- replace(df$c.tenure, df$tenure <= m.tenure/4, m.tenure/4)
@@ -75,8 +79,7 @@ plot(df$c.tenure, main = "Barplot of df$c.tenure")
 hist(df$tenure)
 ```
 
-```{r}
-# TotalCharges
+```{r Discretize TotalCharges}
 df$c.TotalCharges <- df$TotalCharges
 m.TotalCharges <- max(df$TotalCharges, na.rm = TRUE)
 df$c.TotalCharges <- replace(df$c.TotalCharges, df$TotalCharges <= m.TotalCharges/4, m.TotalCharges/4)
@@ -96,8 +99,7 @@ plot(df$c.TotalCharges, main = "Barplot of df$c.TotalCharges")
 hist(df$TotalCharges)
 ```
 
-```{r}
-# MonthlyCharges
+```{r Discretize MonthlyCharges}
 df$c.MonthlyCharges <- df$MonthlyCharges
 m.MonthlyCharges <- max(df$MonthlyCharges, na.rm = TRUE)
 df$c.MonthlyCharges <- replace(df$c.MonthlyCharges, df$MonthlyCharges <= m.MonthlyCharges/4, m.MonthlyCharges/4)
@@ -121,13 +123,12 @@ hist(df$MonthlyCharges)
 par(mfrow=c(1,1))
 ```
 
-Lastly, we divided variables into categorical and numerical to use them in 
-other sections.
+Lastly, we identified categorical and numerical variables for later use.
 
-```{r}
-# The only numerical features that we have are tenure, MonthlyCharges and TotalChages.
+```{r Identify categorical and numerical variables}
 numeric_val_idx = which(sapply(df, is.numeric))
 numeric_val = names(df)[numeric_val_idx]
+# The only numerical features that we have are tenure, MonthlyCharges and TotalChages.
 
 # So the remaining will be categorical features.
 categoric_val_idx = which(sapply(df, is.factor))
@@ -137,20 +138,18 @@ categoric_val = names(df)[categoric_val_idx]
 
 # 2. Exploratory Data Analysis (EDA)
 
-EDA was done mainly automatically using "DataExplorer" library, which does, for each variable, basic plots that allows us to know the distribution of numeric variables, % for each category or missing counts, among other things.
+EDA was done mainly automatically using the "DataExplorer" library. It plots, for each variable, the distribution of numeric variables, the proportion of individuals in each category and the amount of missing values, among other metadata.
 
 The main conclusions of this section are:
-1- Using the QQ plots and distribution plots we see that all numeric variables do not have a normal distribution. This was also checked using visual representation and Kolmogorov-Smirnov test, a more suitable approach than Shappiro Wilk for large samples.
+1- Using the QQ plots and distribution plots we see that no numerical variable is normally distributed. This was also checked visually and with Kolmogorov-Smirnov tests, a more suitable approach than Shappiro-Wilk for large samples.
 
 2- Our database is not balanced in some categories, like PhoneService (9% of "No") or SeniorCitizen(16% of "No"). This is specially relevant for the target, "Churn", that has 30% of cases of "No", so individuals that churned will be more difficult to predict.
 
-3- Qualitative variables have a maximum of 4 levels, so all of them may be suitable for modeling without any aggregation of levels.
+3- Qualitative variables have a maximum of 4 levels, so all of them may be suitable for modeling without any aggregation.
 
-4- Imputation is not required as there are mainly qualitative variables without missings. Missings will also be discussed in the next section.
+5- Some categories, like "OnlineSecurity" or "OnlineBackup", are not applicable if the client does not have an internet connection. Consequently, there is a special level for those cases that contains around 30% of the clients. 
 
-5- Some categories, like "OnlineSecurity" or "OnlineBackup", are not applicable if the client does not have an internet connection. Consequently, there is an special level for those cases that represents around 30% of the categories. 
-
-```{r}
+```{r EDA}
 # Basic EDA
 summary(df)
 
@@ -158,14 +157,13 @@ summary(df)
 #create_report(df, output_file = "Telco.html")
 ```
 
-```{r}
-# Analysis of normality
-# tests:
+```{r Analysis of normality}
+# tests
 ks.test(df$TotalCharges, "pnorm")
 ks.test(df$MonthlyCharges, "pnorm")
 ks.test(df$tenure, "pnorm")
 
-# visually
+# plots
 par(mfrow=c(1,2))
 hist(df$tenure, prob = TRUE, breaks = 10, main = 'Histogram of tenure 
      vs normal distribution', xlab = 'tenure')
@@ -190,57 +188,56 @@ plot(x,y, xlab = 'df$MonthlyCharges', ylab = '')
 par(mfrow=c(1,1))
 ```
 
-# 2. Data Quality Report
+# 3. Data Quality Report
 
-In this section we analysed the missing values, outliers and errors on the numeric variables to increase the quality of the data before modelling.
+In this section we analysed the missing values, outliers and errors of numeric variables to increase the quality of data before modeling.
 
-Firstly, regarding missings, we detected that only "TotalCharges" and, hence, "c.TotalCharges", have a total of 22 missing observations. However, all of them are "not applicable cases" as corresponds to new clients that, consequently, have not receive their first invoice yet so "TotalCharges" can not have a value.In this situation, instead of NA, we can convert them to 0. 
+To start with, we detected that only "TotalCharges", and hence "c.TotalCharges", has a total of 22 missing observations. However, all of them correspond to new clients who have not receive their first invoice yet, so "TotalCharges" can not have a value. In other words, they are "not applicable cases". We naturally impute this observations with 0. 
 
-```{r}
+```{r Distribution of missings}
 # Distribution of missings in df per variable
 apply(sapply(df, is.na), 2, sum)
 
 # Distribution of missings in df per individual
 table(apply(sapply(df, is.na), 1, sum))
 
-# Here we check that all missings in "TotalCharges" are individuals with 0 in "tenure"´
+# Check that all missings in "TotalCharges" correspond to individuals tenure = 0
 TotalCharges.na <- which(is.na(df$TotalCharges))
 sum(TotalCharges.na == which(df$tenure == 0)) == length(TotalCharges.na)
 
 # So we transform them after creating a new numeric variable with all the missings of the database
 df$n.na <- apply(sapply(df, is.na), 1, sum)
 
-na.idx <- which(is.na(df$TotalCharges))
-df$TotalCharges[na.idx] = 0
-df$c.TotalCharges[na.idx] = "(-1,2171]"
+df$TotalCharges[TotalCharges.na] = 0
+df$c.TotalCharges[TotalCharges.na] = "(-1,2171]"
 ```
 
-Secondly, we detected data inconsistencies. For categorical values, we checked the EDA automatic reports and the summaries to ensure that all qualitative variables categories were meaningful and that there was not any misspelling errors. Additionally, we checked that all binary variables only contained 0 or 1 and that all values of numeric variables were positive and reasonable.
+Secondly, we detected data inconsistencies. For categorical values, we checked the EDA automatic reports and the summaries to ensure that all qualitative variables categories were meaningful and that there was not any misspelling errors. We also checked that all values of numeric variables were positive and reasonable.
 
-Additionally, for "TotalCharges" we ensured that all the values were correct by manually calculating the value, for each individual (monthly_charges * tenure) and comparing the value to the actual total charges.
+Additionally, for "TotalCharges" we ensured that all the values were correct by manually calculating the value and comparing it to the actual total charge.
 
-```{r}
+```{r Compare TotalCharges to its expected values}
 # Expected total charges as the product of monthly charges and tenure
 expected_total_charges = df$MonthlyCharges * df$tenure
 
-# Then plot them against the actual total charges
+# Plot them against the actual total charges
 plot(expected_total_charges, df$TotalCharges)
 # There are no outliers, so TotalCharges is consistent.
 ```
 
-Thirdly, we analysed univariate outliers in numeric variables using Boxplots and the typical thresholds: 1.5 * IQR(interquartile range) for severe outliers and 3*IQR for severe outliers. As there were not any outliers we considered that all points were correct. 
+Thirdly, we analysed univariate outliers in numeric variables using Boxplots and the typical thresholds: 1.5 * IQR(interquartile range) for mild outliers and 3 * IQR for severe outliers. As there were not any we considered that all points were suitable for our models.
 
-```{r}
+```{r Boxplots}
 for (var in as.numeric(numeric_val_idx)) {
   Boxplot(df[,var], ylab = names(df)[var], main = "Boxplot") 
 }
 ```
 
-# 3. Creation of new variables??
+## 3.1 In depth analysis of missing values
 
 Next, we will compute for every group of individuals the mean of missing values. Then we will rank the groups according to the computed mean.
 
-```{r}
+```{r Mean of missings for each group}
 # c.TotalCharges has missings, so it doesn't make sense to compute the mean
 # of missings in its categories
 
@@ -251,11 +248,10 @@ for (i in interesting_cat_idx){
 }
 groups.na <- matrix(0, k, 2)
 l = 1
-for (i in seq(length(interesting_cat_idx))) {
-  idx <- interesting_cat_idx[i]
+for (idx in interesting_cat_idx) {
   categories.na <- tapply(df$n.na, df[,idx], mean)
   for (j in seq(length(categories.na))) {
-    groups.na[l + j - 1,] <- c(as.numeric(categories.na[j]),
+    groups.na[l + j - 1,] <- c(categories.na[j],
                                paste(names(df)[idx], levels(df[,idx])[j],
                                      sep = "."))
   }
@@ -265,11 +261,36 @@ groups.na.df <- data.frame(na.perc = groups.na[,1], group = groups.na[,2])
 groups.na.df[order(groups.na.df$na.perc, decreasing = TRUE),]
 ```
 
-# 4. Multivariate outliers
+The groups with the highest proportion of missing data are made of those individuals who:
 
-In this section we focused on detecting the multivariate outliers using "Moutlier" method. We discovered that there were 344 multivariate outliers, about 5% of the individuals as expect. However, we decided to maintain them and only remove them in the modeling step if they are influential points.
+- Have a two-year contract
+- Have dependents
+- Pay with a mailed check
 
-```{r}
+Since the set of individuals with missing data is exactly that of the new clients, we conclude that recently incorporated clients tend to: sign a two-year contract, have dependents and pay with a mailed check.
+
+We can compute as well the pearson correlation coefficient between "n.na" and the numerical variables.
+
+```{r n.na correlations}
+# Creation of the correlation matrix
+corr_mat <- cor(df[,c(numeric_val_idx, 25)],)
+corr_mat
+
+corrplot(corr_mat, order = 'hclust')
+```
+
+n.na is independent to the rest of numerical variables, probably because it evaluates to 0 in most observations.
+
+```{r Remove n.na, echo=F, message=FALSE, warning=FALSE, results='hide'}
+# We remove n.na so that it does not interfere with the rest of the project
+df$n.na <- NULL
+```
+
+## 3.2 Multivariate outliers
+
+In this section we focused on detecting the multivariate outliers using "Moutlier". We discovered 344 multivariate outliers, about 5% of the individuals, as it was expected. We decided to maintain them and only remove them in the modeling step if they turned out to be influential points.
+
+```{r Moutlier}
 set.seed(123)
 res.mout <- Moutlier(df[,numeric_val_idx], quantile = 0.95, plot= FALSE)
 
@@ -294,24 +315,10 @@ length(outliers)/dim(df)[1]*100
 # 5. Profiling and feature selection
 
 ## Numeric variables
-Firstly, we analysed the pearson correlation coefficient to detect variables that were highly related and not include them in the model. We have also included two variables "n.na", that contained the total number missing values per individual. Note that, as there are not any outliers or errors, it makes no sense to define those variables as it would be a vector of 0's with, obviously, no correlation with other variables.
-
-In the correlation plot we see that "TotalCharges" is highly correlated with "MonthlyCharges" and "tenure" as the first one is calculated as the product of the others. n.na is not correlated to any other variable as it only contains 11 individuals that are not 0.
-
-```{r}
-# Creation of the correlation matrix
-corr_mat <- cor(df[,c(numeric_val_idx, 25)],)
-corr_mat
-
-corrplot(corr_mat, order = 'hclust')
-
-# We remove the newly created variables to  not interfere in the rest of the project
-df$n.na <- NULL
-```
+We analysed the pearson correlation coefficient to detect variables that were highly related and not include them in the model. In the correlation plot of section 3.1 we see that "TotalCharges" is highly correlated with "MonthlyCharges" and "tenure" as the first one is calculated as the product of the others.
 
 ## Categorical variables
-
-Secondly, we performed a profiling using "gtable" which allows us to check if there are significant differences of the levels of a variable and the target.This is done visually and using  a "Pearson's Chi-squared test". 
+Later on, we profiled the target Churn using "gtable". This method checks whether there are significant differences between the levels of each categorical variable and the target. We get both plots and the Pearson's Chi-squared test's results. 
 
 ```{r, results='hide'}
 # Analysis of all variables except the ID
