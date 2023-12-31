@@ -367,13 +367,13 @@ As for numeric variables, "tenure" has the lowest p-value, much lower than those
 res.cat$quanti.var
 ```
 
-Lastly, we decided to make an extensive profiling for the six categorical variables that we could use in the model in order to understand them better. The main conclusions for each variable are:
+Lastly, we decided to make an extensive profiling for the six categorical variables that we could use in the model in order to understand them better. The main conclusions for each variable were:
 
--Contract: The probability to churn is decreased when the contract term increases. For example, if a costumer has a month contract and changes it to an annual the probability of not churning increases from 0.60 to 0.89.
+- Contract: The probability of churning is decreased when the contract term increases. For example, if a costumer has a month contract and changes it to an annual the probability of not churning increases from 0.58 to 0.89.
 
--InternetService: People that do not have an internet service tend not to churn (92%). However, if they had a Fiber optic connection, the probability to churn gets higher (41%). This could be explained as users that use internet think that there are other companies than a better offer than the current one, but it would be necessary to make a market analysis to validate this hypothesis.
+- InternetService: People that do not have an internet service do not usually churn (7%). However, if they had a Fiber optic connection, the probability to churn increases (42%). This could be explained by the fact that users with a fast internet connection try to get the best offer for the service, but it would be necessary to make a market analysis to validate this hypothesis.
 
--OnlineSecurity: The probability to churn is reduced when the costumer has online security. However, having an internet connection seems a more interesting feature than the variable as "No internet service" level has a more important change of proportions than the other levels.
+- OnlineSecurity: The probability of churning is small when the customer has online security. However, having an internet connection seems a more interesting feature than the variable as "No internet service" level has a more important change of proportions than the other levels.
 
 -TechSupport: Having a tech support increases the probability not to churn from 60% to 84%, but having internet or not is, again, a more relevant feature.
 
@@ -388,14 +388,12 @@ index = NULL
 
 for (i in 1:length(names)) {
   ind = grep(names[i], colnames(df))
-  print(ind)
   index = append(index, ind)
 }
-
-index = append(index, 21);
+index = append(index, grep("Churn", names(df)))
 
 # Profiling of only those variables
-res.cat2 = catdes(df[,index], 7)
+res.cat2 = catdes(df[,index], length(index))
 
 res.cat2$category
 
