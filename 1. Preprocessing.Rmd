@@ -341,30 +341,29 @@ profiling(df[11], df$Churn, "Churn")
 ```
 
 ## Feature Selection
-Lastly, we decided which variables were suitable to be included in the model. 
+Finally, we decided which variables were suitable to be included in the model. 
 
-Initially, we removed the "id" as we consider that it will not give us any useful knowledge or be useful to predict the target. 
+The id was removed, since it will not give us any knowledge nor be useful to predict the target. 
 
-```{r}
-# customerID should be removed
+```{r Remove customerID}
 df$customerID <- NULL
 ```
 
-Secondly, we computed the relationship of variables against the target:
+We then computed the relationship between all variables and the target:
 
--For categorical variables all p values are very low, less than 0.001, but the 6 variables with the lowest value are Contract, OnlineSecurity, TechSupport, c.tenure, InternetService, PaymentMethod. Note that the list includes one discrete variable.
+For categorical variables all p-values are very low, less than 0.001, but the 6 variables with the lowest value are Contract, OnlineSecurity, TechSupport, c.tenure, InternetService, PaymentMethod. Note that the list includes a discretized numerical variable.
 
-```{r}
-# Dind the correlation between the variables against our qualitative target Churn.
+```{r catdes categorical}
+# Correlation between all variables and our qualitative target Churn.
 res.cat = catdes(df, 20)
 
 # Most important categorical variables, sorted by p value
 res.cat$test.chi2
 ```
 
-- For the numeric variables "tenure" has the lowest p value, much lower than the discrete version. However, using one or the other will be decided in the modelling process. Additionally, in a previous section, we decided that the model will only include "MonthlyCharges" and "tenure" or "TotalCharges", as there is a high correlation among them. 
+As for numeric variables, "tenure" has the lowest p-value, much lower than those of discrete variables. As we have already seen, there is a high correlation between "MonthlyCharges", "tenure" and "TotalCharges" so we will only include in the models "TotalCharges" or "MonthlyCharges" together with "tenure".
 
-```{r}
+```{r catdes numerical}
 res.cat$quanti.var
 ```
 
