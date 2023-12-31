@@ -10,13 +10,15 @@ output:
     toc: yes
     toc_depth: 3
     number_sections: no
+    header-includes:
+      - \pagenumbering{arabic}
 editor_options:
   chunk_output_type: console
 ---
 
-- Residual analysis at the end of the project.
-- Profiling: AN EXTRA POINT TO BE DONE. WE CAN DO IT LATTER. USE THE SCRIPT PROVIDED BY MVA.
-- SI GENEREM UN WORD, L'HEM DE JUSTIFICAR ABANS DE CONVERTIR A PDF.
+- Profiling: AN EXTRA POINT TO BE DONE. WE CAN DO IT LATTER. USE THE SCRIPT PROVIDED BY MVA ???
+- SI GENEREM UN WORD, L'HEM DE JUSTIFICAR I HEM DE NUMERAR-NE LES PÀGINES ABANS DE CONVERTIR-LO A PDF.
+- #Pàgines actual (sense annex): 41/50
 
 # 0. Introduction
 
@@ -24,7 +26,7 @@ In this project, we will study the data set "Telco Customer Churn", which can be
 
 All members have contributed equally to all parts of the project.
 
-```{r Clean workspace. Load libraries, echo=F, message=FALSE, warning=FALSE, results='hide'}
+```{r Clean workspace. Load libraries, echo=F, results='hide'}
 if(!is.null(dev.list())) dev.off()
 rm(list = ls())
 
@@ -39,7 +41,7 @@ source("profiling_func.R")
 library(ROSE)
 ```
 
-```{r Import dataset, echo=F, message=FALSE, warning=FALSE, results='hide'}
+```{r Import dataset, echo=F, results='hide'}
 df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls",header=T, sep=",",
               stringsAsFactors=TRUE)
 
@@ -55,6 +57,7 @@ summary(df)
 
 The data set contains `r dim(df)[1]` observations of `r dim(df)[2]` variables.
 
+\newpage
 # 1. Data preparation
 
 The first part of the project consisted on doing some basic data preparation to ensure that data is ready for the next sections.
@@ -141,7 +144,7 @@ categoric_val_idx = which(sapply(df, is.factor))
 categoric_val = names(df)[categoric_val_idx]
 ```
 
-
+\newpage
 # 2. Exploratory Data Analysis (EDA)
 
 EDA was done mainly automatically using the "DataExplorer" library. It plots, for each variable, the distribution of numeric variables, the proportion of individuals in each category and the amount of missing values, among other metadata.
@@ -194,6 +197,7 @@ plot(x,y, xlab = 'df$MonthlyCharges', ylab = '')
 par(mfrow=c(1,1))
 ```
 
+\newpage
 # 3. Data Quality Report
 
 In this section we analysed the missing values, outliers and errors of numeric variables to increase the quality of data before modeling.
@@ -320,35 +324,36 @@ length(outliers)
 length(outliers)/dim(df)[1]*100
 ```
 
-# 5. Profiling of the target and feature selection
+\newpage
+# 4. Profiling of the target and feature selection
 
 ## Numeric variables' correlations
 We analysed the pearson correlation coefficient to detect variables that were highly related and not include them all in the model. In the correlation plot of section 3.1 we see that "TotalCharges" is highly correlated with "MonthlyCharges" and "tenure" as the first one is calculated as the product of the others.
 
 ## Profiling of the target
-Later on, we profiled the target Churn using a custom function "profiling()" created in the Multivariate Analysis subject of the Master's degree. This method expands "catdes()" and performs many plots and tests according to the type of each variable. We will focus on plots and the given tests' results: Chi^2, ANOVA and Kruskal-Wallis.
+Later on, we profiled the target Churn using a custom function "profiling()" created in the Multivariate Analysis subject of the Master's degree. This method expands "catdes()" and performs many plots and tests according to the type of each variable. We will focus on plots and the given tests' results: Chi^2, ANOVA and Kruskal-Wallis, which can be found in the annex.
 
-```{r Karinas profiling method, results='hide'}
+```{r Karinas profiling method, results='hide', fig.show='hide'}
 # Analysis of all variables except the ID
-profiling(df[-c(1, grep("Churn", names(df)))], df$Churn, "Churn")
+profiling(df[-c(grep("customerID", names(df)), grep("Churn", names(df)))], df$Churn, "Churn")
 ```
 
 The most relevant conclusions are:
 - Some variables are not significant, like Gender (Chi^2 p-value=0.4866) or Phone service (Chi^2 p-value=0.3388). Consequently, we state that churn is independent of the client's gender and whether he/she/they has a phone service contracted.
 
-```{r targets profiling with gender and PhoneService, echo=F}
+```{r targets profiling with gender and PhoneService, results='hide', fig.show='hide'}
 profiling(df[c(grep("gender", names(df)),grep("PhoneService", names(df)))], df$Churn, "Churn")
 ```
 
 - There are variables like "MultipleLines" that even being significant (Chi^2 p-value=0.003464) the difference among levels is small, as we can see in the plots
 
-```{r targets profiling with MultipleLines, echo=F}
+```{r targets profiling with MultipleLines, results='hide', fig.show='hide'}
 profiling(df[grep("MultipleLines", names(df))], df$Churn, "Churn")
 ```
 
 - The rest of variables, including the discretized, have a small p-value (< 2.2e-16) in the Chi^2, ANOVA or Kruskal-Wallis test, according to their type, and have at least one level where the target's distribution is different than in the rest. For example, 40% of people that did not have an online backup churned, while only 22% of customers having the backup did.
 
-```{r targets profiling with OnlineBackup, echo=F}
+```{r targets profiling with OnlineBackup, results='hide', fig.show='hide'}
 profiling(df[grep("OnlineBackup", names(df))], df$Churn, "Churn")
 ```
 
@@ -418,13 +423,14 @@ res.cat2$category
 #profiling(df[,index], df$Churn, "Churn")
 ```
 
-# 6. Modeling 
+\newpage
+# 5. Modeling 
 
 ## Data splitting
-```{r}
-# First, let's split the dataset into training and testing set. 
-# We can consider that 70% of data will be used for training purpose.
 
+First, let's split the dataset into training and testing set. We have decided that 70% of the data will be used for training.
+
+```{r Data splitting}
 set.seed(123)
 
 sampling = sample.split(df$Churn, SplitRatio = 0.7)
@@ -432,185 +438,197 @@ train = subset(df, sampling == TRUE)
 test = subset(df, sampling == FALSE)
 ```
 
-## Modelling only with numerical variables.
-```{r}
-# As we mentioned, there is a strong correlation between {tenure, MonthlyCharges}
-# and {TotalCharges}, as the second one is simply the product of first set.
-# So we will build two model with different data set, and keep the best one.
+## Modeling only with numerical variables
 
+As we mentioned, there is a strong correlation between {tenure, MonthlyCharges} and TotalCharges, as the second one is simply the product of the variables in the first set. Hence,  we will build two models, one for each set of variables, and keep the best one.
+
+```{r Models with numeric variables}
 m0.set1 = glm (Churn ~ tenure + MonthlyCharges, data = train, family = binomial)
-# Checking the Anova test, both variable are significant to our model.
+# Checking the Anova test, both variables are significant to our model.
 # Hence, we won't remove any of them.
 Anova(m0.set1, test = "LR")
 
 m0.set2 = glm (Churn ~ TotalCharges, data = train, family = binomial)
 
-# Checking the Bayesian criterion, the set {tenure, MonthlyCharges} 
-# has much lower value. Hence, we'll choose this for further analysis.
 BIC(m0.set1, m0.set2)
 ```
 
-```{r}
-# Checking possible transformation for previous model m0.set1
+Checking the Bayesian criterion, the set {tenure, MonthlyCharges} has a much lower value and its variables are significant. Hence, we'll choose this set of variables for further analysis.
 
+
+We also check possible transformation for our model m0.set1.
+
+```{r Transformations of numeric variables in the model}
 m0.log = glm (Churn ~ tenure + log(MonthlyCharges), data = train, family = binomial)
 m0.sqrt = glm (Churn ~ sqrt(tenure) + MonthlyCharges, data = train, family = binomial)
 
-# We have tried several transformations for both variable (sqrt, log, exp, etc),
-# but BIC shows that the best model is the one with sqrt on the tenure.
 BIC (m0.set1, m0.log, m0.sqrt)
 ```
 
-```{r}
-# Comparing categorical variables {c.tenure}. We'll like to make an comparison 
-# between different kind of tenure (numerical and discretized)
+We have tried several transformations for both variables (sqrt, log, exp, etc), but BIC shows that the best model is the one with sqrt on tenure.
+
+Discretized variables might create a better model, so we study this possibility.
+
+```{r Model with discretized numerical variables}
 m1 = glm (Churn ~ c.tenure + MonthlyCharges, data = train, family = binomial)
 
 BIC(m1, m0.sqrt)
-# Checking the AIC and BIC parameter, we decided to keep the tenure numerical, without discretization.
-
-# We have checked alternately by changing MonthlyCharges to discretized, but
-# the AIC also get worse.
 ```
 
-```{r, results= 'hide'}
-# Check the influential plot
+Checking the AIC and BIC parameters, we decided to keep the numerical version of tenure. We have checked as well the model with MonthlyCharges discretized, but the AIC is worse once more.
+
+## Residual analysis only with numerical variables
+
+It is important to look for influential points in the model that could worsen it. "influencePlot()" computes the Cook's distance of each point, so that we can compare them with the threshold studied in the course.
+
+```{r Influential data on model with numerical variables, fig.show='hide'}
+# Check influential points
 influent = influencePlot(m0.sqrt)[3]; influent
 
 # Calculate D's threshold
 D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
-
-# Cook's distance obtained from influence plot are smaller than
-# threshold, hence, we won't remove any point.
 ```
 
-```{r}
-# Adding categorical variables {Contract}
+The Cook's distances obtained from "influencePlot()" are smaller than our threshold, so we will not remove any point.
+
+## Adding factor main effects to the model
+
+After being satisfied with our final model based on numerical variables, we add categorical variables to it in decreasing relevance order.
+
+```{r Adding {Contract}}
+# Adding {Contract}
 m2 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract, 
           data = train, family = binomial)
 
-# Adding {contract} indeed reduce BIC of our model.
+# Adding {contract} indeed reduces the BIC of our model.
 BIC(m0.sqrt, m2)
 ```
 
-```{r}
-# Adding categorical variables {InternetService}
+```{r Adding {InternetService}}
+# Adding {InternetService}
 m3 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService, 
           data = train, family = binomial)
 
-# Adding {InternetService} indeed reduce BIC of our model.
+# Adding {InternetService} indeed reduces the BIC of our model.
 BIC(m2,m3)
 ```
 
-We have figured out in profiling section that {InternetService} and {OnlineSecurity, TechSupport} have some level that are strongly correlated.
-In case that {Internet Service} = "No", {OnlineSecurity} and {TechSupport} 
-are also None ("No intervet service").
+We have figured out in the profiling section that {InternetService} and {OnlineSecurity, TechSupport} have some levels that are strongly correlated.
+Specifically, when "InternetService" = "No", "OnlineSecurity and "TechSupport" 
+can't be given a value, so they are declared as "No intervet service".
 
-Hence, to avoid dependency and NA's features in the model, we'll need to
-decide which one to keep
+To avoid multicollinearity and NA's, we need to decide which variable to keep.
 
-```{r}
-# Adding categorical variables {TechSupport} and {OnlineSecurity}
+```{r Adding {TechSupport, OnlineSecurity}}
+# Adding {TechSupport, OnlineSecurity}
 m4 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + OnlineSecurity 
           + TechSupport, data = train, family = binomial)
 
 BIC(m3, m4)
-
-# The BIC criterion for m4 is smaller, but taking into account that
-# {InternetService} is more correlated with target variable {Churn} 
-# and the difference of BIC is not that significant. we decided to keep
-# m3, with {InternetService}.
 ```
 
-```{r}
-# Adding categorical variable {PaymentMethod}
+The BIC criterion for m4 is smaller, but taking into account that "InternetService" is more correlated with the target variable and the difference in the BIC is not that significant, we decided to keep m3, with "InternetService".
+
+```{r Adding {PaymentMethod}}
+# Adding {PaymentMethod}
 m5 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod, data = train, family = binomial)
 
-# Adding {PaymentMethod} indeed reduce BIC of our model.
+# Adding {PaymentMethod} indeed reduces the BIC of our model.
 BIC(m3, m5)
 ```
 
-```{r, results= 'hide'}
-# Check influential plot before removing influential observation.
+## Residual analysis with categorical variables
+
+We repeat the residual analysis performed earlier with our current model.
+
+```{r Influential data on model with categorical variables, fig.show='hide'}
+# Check influential points
 influent = influencePlot(m5)[3]; influent
 
 # Calculate D's threshold
 D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
-
-# Cook's distance obtained from influence plot are smaller than
-# threshold, hence, we won't remove any point.
 ```
 
-```{r}
-# Check all the possible interactions of model m5.
+As before, the Cook's distances obtained from "influencePlot()" are smaller than our threshold, so we will not remove any point.
+
+## Adding interactions to the model
+
+Sometimes interactions between dependent variables improve a model, so let us see how they work in our case. To start with, we check all possible interactions and execute "step()" to end up with the most relevant ones.
+
+```{r Check all possible interactions}
+# Check all possible interactions of model m5
 m6 = glm (Churn ~ (sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod)^2, data = train, family = binomial)
 
-# Use step function to find the combination with minimun AIC. 
+# Use step function to find the combination that minimizes the AIC. 
 step(m6)
 ```
 
-                                 Df Deviance    AIC
-<none>                                4022.7 4068.7
-- sqrt(tenure):PaymentMethod      3   4031.4 4071.4
-- sqrt(tenure):Contract           2   4033.0 4075.0
-- MonthlyCharges:Contract         2   4035.2 4077.2
-- Contract:InternetService        4   4042.4 4080.4
-- MonthlyCharges:InternetService  2   4055.1 4097.1
+Even though "step()" recommends not to add any interaction, we see how the ones with the smallest AIC perform. That is, we add the interactions between "sqrt(tenure)" and "PaymentMethod" or "Contract".
 
-```{r}
-# Check the interaction between sqrt(tenure):PaymentMethod and
-# sqrt(tenure):Contract
+```{r sqrt(tenure):PaymentMethod and sqrt(tenure):Contract}
 m7 = glm(Churn ~ sqrt(tenure) * PaymentMethod + sqrt(tenure) * Contract +
           MonthlyCharges + InternetService + PaymentMethod, data = train, 
           family = binomial)
 
-# Based on BIC criterion, no improvement is obtained.
 BIC (m5, m7)
 ```
 
-```{r}
-# Check the interaction between MonthlyCharges and InternetService
+According to the BIC criterion, no improvement is obtained.
+
+Now we will add the interaction with the highest AIC instead, 
+"MonthlyCharges:InternetService".
+
+```{r MonthlyCharges:InternetService}
 m8 = glm(Churn ~ sqrt(tenure) +  Contract + MonthlyCharges * InternetService 
          + PaymentMethod, data = train, family = binomial)
 
-# BIC improved from 4174 to 4164, but with the cost of 2 degree of freedom.
 BIC(m5,m8)
-
-# It's a trade-off between simpleness of the model and the accuracy.
 summary(m8)
 ```
 
-```{r}
-# Check the effect of linked function
+The BIC improved from 4174 to 4164, but with the cost of 2 degrees of freedom. Adding the interaction between "MonthlyCharges" and "InternetService" is a trade-off between simplicity and accuracy. At this point, after having added many variables, we value more simplicity, so we will not add this interaction.
+
+## Trying link function probit
+
+We are interested in the effect of changing the link function of the logistic regression to probit.
+
+```{r probit}
 m9 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod, data = train, family = binomial(link = "probit"))
 
-# Based on BIC criterion, no improvement is obtained.
 BIC(m5, m9)
 ```
 
-```{r}
-influencePlot(m9)
+Sadly, based on the BIC criterion, no improvement is obtained.
 
-# Observation 269 and 4273 may be an influential point, but both of them
-# are smaller than threshold.
+## Final residual analysis
+
+We will perform now a final residual analysis.
+
+```{r Final Influential data analysis}
+# Check influential points
+influent = influencePlot(m9)[3]; influent
+
+# Calculate D's threshold
+D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
 ```
 
+Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold.
 
-```{r}
-# Goodness of fit
+\newpage
+# 6. Goodness of fit
 
-# Residual plot
+NOT FINISHED FROM HERE UNTIL THE ANNEX
 
+```{r Residual plots}
 residualPlots(m5)
-
 ```
 
-# Model prediction
+## Model prediction
 
-```{r}
+```{r predict()}
 # First, we compute the probability of Churn for each observation (from test) 
 # with predict function.
 predictions = predict(m5, test, type = "response")
@@ -628,12 +646,21 @@ roc.curve(test$Churn, probability)
 ```
 
 
-```{r}
+```{r PseudoR2()}
 library(DescTools)
 PseudoR2(m5, which = "McFadden")
 ```
 
+\newpage
+# 7. Model interpretation
+
+\newpage
 # Annex
 
+## Expanded profiling of the target with the "profiling()" method
 
+```{r Karinas profiling method not hidden}
+# Analysis of all variables except the ID
+profiling(df[-c(grep("customerID", names(df)), grep("Churn", names(df)))], df$Churn, "Churn")
+```
 
