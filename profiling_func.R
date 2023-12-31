@@ -41,14 +41,19 @@ profiling <- function(df, P, nameP) {
   
   for(k in 1:K){
     if (is.numeric(dades[,k])){ 
-      print(paste("Anàlisi per classes de la Variable:", names(dades)[k]))
+      print(paste("Analysis by level of :", names(dades)[k]))
       
-      boxplot(dades[,k]~P, main=paste("Boxplot of", names(dades)[k], "vs", nameP ), horizontal=TRUE)
+      boxplot(dades[,k]~P, main=paste("Boxplot of",
+                                      names(dades)[k], "vs", nameP ),
+              horizontal=TRUE, xlab = names(dades)[k], ylab = nameP)
       
-      barplot(tapply(dades[[k]], P, mean),main=paste("Means of", names(dades)[k], "by", nameP ))
+      barplot(tapply(dades[[k]], P, mean),main=paste("Means of",
+                                                     names(dades)[k], "by",
+                                                     nameP ),
+              xlab = nameP, ylab = names(dades)[k])
       abline(h=mean(dades[[k]]))
       legend(0,mean(dades[[k]]),"global mean",bty="n")
-      print("Estadístics per groups:")
+      print("Statistics by group:")
       for(s in levels(as.factor(P))) {print(summary(dades[P==s,k]))}
       o<-oneway.test(dades[,k]~P)
       print(paste("p-valueANOVA:", o$p.value))
@@ -93,7 +98,7 @@ profiling <- function(df, P, nameP) {
         plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of ", nameP,
                                                   "'s levels globally and by ",
                                                   names(dades)[k], sep=""),
-             ylab="Proportion")
+             ylab="Proportion", xlab = nameP)
         paleta<-rainbow(length(levels(dades[,k])))
         for(c in 1:length(levels(dades[,k]))){lines(colperc[,c],col=paleta[c]) }
         legend("topright", c("Global", levels(dades[,k])), col=c("black", paleta), lty=2, cex=0.6)
@@ -123,7 +128,7 @@ profiling <- function(df, P, nameP) {
         plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of ",names(dades)[k],
                                                   " globally and by ", nameP,
                                                   "'s levels", sep=""),
-             ylab="Proportion")
+             ylab="Proportion", xlab = names(dades)[k])
         for(c in 1:length(levels(as.factor(P)))){lines(rowperc[c,],col=paleta[c])}
         legend("topright", c("Global", levels(as.factor(P))), col=c("black", paleta), lty=2, cex=0.6)
         

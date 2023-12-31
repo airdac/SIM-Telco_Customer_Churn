@@ -1,0 +1,3 @@
+word_document:
+    toc: yes
+    toc_depth: '3'

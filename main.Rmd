@@ -3,22 +3,27 @@ title: "SIM. Assignment 2: Telco Customer Churn"
 author: "Adrià Casanova, Víctor Garcia, Zhengyong Ji"
 date: "2024-01-05"
 output:
-  word_document:
-    toc: yes
-    toc_depth: '3'
   pdf_document:
     toc: yes
     toc_depth: 3
     number_sections: no
-    header-includes:
-      - \pagenumbering{arabic}
 editor_options:
   chunk_output_type: console
+header-includes:
+  \usepackage{fvextra}
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+  \usepackage{listings}
+  \lstset{breaklines=true}
 ---
 
+```{r, global_options, include=FALSE}
+library(knitr)
+opts_chunk$set(message=FALSE, tidy.opts=list(width.cutoff=60), tidy=TRUE)
+```
+
+- #Pàgines actual (sense annex): 36/50 en pdf i 41/50 en word
 - Profiling: AN EXTRA POINT TO BE DONE. WE CAN DO IT LATTER. USE THE SCRIPT PROVIDED BY MVA ???
 - SI GENEREM UN WORD, L'HEM DE JUSTIFICAR I HEM DE NUMERAR-NE LES PÀGINES ABANS DE CONVERTIR-LO A PDF.
-- #Pàgines actual (sense annex): 41/50
 
 # 0. Introduction
 
@@ -26,7 +31,7 @@ In this project, we will study the data set "Telco Customer Churn", which can be
 
 All members have contributed equally to all parts of the project.
 
-```{r Clean workspace. Load libraries, echo=F, results='hide'}
+```{r Clean workspace. Load libraries, include=FALSE}
 if(!is.null(dev.list())) dev.off()
 rm(list = ls())
 
@@ -41,17 +46,16 @@ source("profiling_func.R")
 library(ROSE)
 ```
 
-```{r Import dataset, echo=F, results='hide'}
+```{r Import dataset, include=FALSE}
 df = read.csv("WA_Fn-UseC_-Telco-Customer-Churn.xls",header=T, sep=",",
               stringsAsFactors=TRUE)
-
-head(df)
 ```
 
 We start by taking a first general look at the dataset.
 
 ```{r First look at df}
-str(df)
+head(df)
+dim(df)
 summary(df)
 ```
 
