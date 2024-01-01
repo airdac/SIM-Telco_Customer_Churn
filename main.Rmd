@@ -168,7 +168,7 @@ The main conclusions of this section are:
 summary(df)
 
 # Completed EDA 
-#create_report(df, output_file = "Telco.html")
+# create_report(df, output_file = "Telco.html")
 ```
 
 ```{r Analysis of normality}
@@ -255,8 +255,7 @@ par(mfrow=c(1,1))
 Next, we will compute for every group of individuals the mean of missing values. Then we will rank the groups according to the computed mean.
 
 ```{r Mean of missings for each group}
-# c.TotalCharges has missings, so it doesn't make sense to compute the mean
-# of missings in its categories
+# c.TotalCharges has missings, so it doesn't make sense to compute the mean of missings in its categories
 
 interesting_cat_idx <- categoric_val_idx[-c(1,20)]
 k = 0
@@ -425,7 +424,7 @@ res.cat2 = catdes(df[,index], length(index))
 res.cat2$category
 
 # Another visualization of the profiling
-#profiling(df[,index], df$Churn, "Churn")
+# profiling(df[,index], df$Churn, "Churn")
 ```
 
 \newpage
@@ -449,8 +448,7 @@ As we mentioned, there is a strong correlation between {tenure, MonthlyCharges} 
 
 ```{r Models with numeric variables}
 m0.set1 = glm (Churn ~ tenure + MonthlyCharges, data = train, family = binomial)
-# Checking the Anova test, both variables are significant to our model.
-# Hence, we won't remove any of them.
+# Checking the Anova test, both variables are significant to our model. Hence, we won't remove any of them.
 Anova(m0.set1, test = "LR")
 
 m0.set2 = glm (Churn ~ TotalCharges, data = train, family = binomial)
@@ -459,7 +457,6 @@ BIC(m0.set1, m0.set2)
 ```
 
 Checking the Bayesian criterion, the set {tenure, MonthlyCharges} has a much lower value and its variables are significant. Hence, we'll choose this set of variables for further analysis.
-
 
 We also check possible transformation for our model m0.set1.
 
@@ -501,7 +498,6 @@ The Cook's distances obtained from "influencePlot()" are smaller than our thresh
 After being satisfied with our final model based on numerical variables, we add categorical variables to it in decreasing relevance order.
 
 ```{r Adding {Contract}}
-# Adding {Contract}
 m2 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract, 
           data = train, family = binomial)
 
@@ -510,7 +506,6 @@ BIC(m0.sqrt, m2)
 ```
 
 ```{r Adding {InternetService}}
-# Adding {InternetService}
 m3 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService, 
           data = train, family = binomial)
 
@@ -525,7 +520,6 @@ can't be given a value, so they are declared as "No intervet service".
 To avoid multicollinearity and NA's, we need to decide which variable to keep.
 
 ```{r Adding {TechSupport, OnlineSecurity}}
-# Adding {TechSupport, OnlineSecurity}
 m4 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + OnlineSecurity 
           + TechSupport, data = train, family = binomial)
 
@@ -535,7 +529,6 @@ BIC(m3, m4)
 The BIC criterion for m4 is smaller, but taking into account that "InternetService" is more correlated with the target variable and the difference in the BIC is not that significant, we decided to keep m3, with "InternetService".
 
 ```{r Adding {PaymentMethod}}
-# Adding {PaymentMethod}
 m5 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod, data = train, family = binomial)
 
@@ -548,7 +541,6 @@ BIC(m3, m5)
 We repeat the residual analysis performed earlier with our current model.
 
 ```{r Influential data on model with categorical variables, fig.show='hide'}
-# Check influential points
 influent = influencePlot(m5)[3]; influent
 
 # Calculate D's threshold
@@ -561,8 +553,7 @@ As before, the Cook's distances obtained from "influencePlot()" are smaller than
 
 Sometimes interactions between dependent variables improve a model, so let us see how they work in our case. To start with, we check all possible interactions and execute "step()" to end up with the most relevant ones.
 
-```{r Check all possible interactions}
-# Check all possible interactions of model m5
+```{r Check all possible interactions of model m5}
 m6 = glm (Churn ~ (sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod)^2, data = train, family = binomial)
 
@@ -597,7 +588,7 @@ The BIC improved from 4174 to 4164, but with the cost of 2 degrees of freedom. A
 
 ## Trying link function probit
 
-We are interested in the effect of changing the link function of the logistic regression to probit.
+We are interested in the effect of changing the link function of the logistic regression to "probit".
 
 ```{r probit}
 m9 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
@@ -619,12 +610,14 @@ influent = influencePlot(m9)[3]; influent
 # Calculate D's threshold
 D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
 
+# the most influent observation are the 269 and 4273 with biggest Cook's distance. But both are not included in the multivariate outlier.
 sum(outliers==269)
 sum(outliers==4273)
 
 df$Churn[269]
 df$Churn[4273]
 
+# Neither in univariate outlier in tenure and TotalCharges.
 sum(Boxplot(df$tenure[df$Churn=="Yes"])==269)
 sum(Boxplot(df$tenure[df$Churn=="Yes"])==4273)
 
@@ -632,7 +625,7 @@ sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==269)
 sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==4273)
 ```
 
-Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold. Any of these are mutlivariate outliers or severe outliers of a numerical variable when looked in their category of Churn.
+Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold. Any of these are mutlivariate outliers or severe outliers of a numerical variable when looked in their category of Churn. Hence, we won't remove any of them.
 
 \newpage
 # 6. Goodness of fit
@@ -641,13 +634,13 @@ Observations 269 and 4273 may be influential points, but both of them are smalle
 PseudoR2(m5, which = "McFadden")
 ```
 
-Not excellent, but acceptable.
+The R2 of McFadden isn't excellent, but acceptable. Let's check the residual plots.
 
 ```{r Residual plots}
 residualPlots(m5)
 ```
 
-The results are not perfect, so we see what happens when we remove all multivariate outliers.
+In the residual plot we see that all levels in the model contains severe outliers, except for "Month-to-month" (there is only 1 outlier). However, those points does not seem to affect pearson residuals distributions that are all close to zero as expected.
 
 ```{r m5.out}
 m5.mout = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
@@ -655,20 +648,17 @@ m5.mout = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetServic
 residualPlots(m5.mout)
 ```
 
-We cannot compare the BIC nor other measure of fitness between m5 and m5.mout because they do not have the same cardinality. Therefore, we have simply observed the residualPlot, which have gotten worse actually. The conclusion we extract from this fact is that it is better to keep multivariate outliers.
-
+To try to remove those outliers from the categorical variables we remove all multivariate outliers. This gives us an alternative model (m5.mout) that we cannot compare using BIC or other measure of fitness as models does not have the same cardinality. However, the new model does still contains the outliers in the residual plot so we consider that it is better not to remove the multivariate outliers.
 
 ## Model prediction
 
 Once we have our final model m5 we can predict the values of Churn on the test dataset
 
 ```{r predict()}
-# First, we compute the probability of Churn for each observation (from test) 
-# with predict function.
-predictions = predict(m5, test, type = "response")
+# First, we compute the probability of Churn for each observation (from test) with predict function.
+predictions = predict(m5, test[-20], type = "response")
 
-# Then, for those that have a probability higher than 0.5, we can consider
-# Churn == "Yes"
+# Then, for those that have a probability higher than 0.5, we can consider Churn == "Yes"
 probability = factor(as.character(ifelse(predictions >= 0.5, "Yes", "No")))
 
 # Finally, compute the Confusion Matrix of predicted result
@@ -681,6 +671,32 @@ With the predicted values of the target, we can also study the goodness of fit o
 
 \newpage
 # 7. Model interpretation
+
+Finally, let's resume our final model, and try to interpret it.
+
+```{r}
+m5 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
+          + PaymentMethod, data = train, family = binomial)
+
+m5
+```
+
+The model is composed by the tenure of costumer, the amound of bill they paid monthly, the kind of contract period that they have with the company, the service they own and then the payment method.
+
+Bear in mind that 0 means "No Churn" and 1 means "Churn Yes", clients who have less probability of leaving the company are those with lowest score. 
+
+Checking the coefficients of m5. The client whose seniority are longer, and contract type with more prolonged period are more comfortable with the company and are less probable to churn.
+
+The coefficient of InternetService equals to "No" is negative, which may indicate that this group of individual prefer to a more basic service but are more stable.
+
+While in the other hand, the individual who own InternetService equals to "Fiber optic", they coefficient is positive. Indicating that they prefer a internet service, but also more flexible to switch the company.
+
+But overall, the most influential variable are Contract equal to "One year" and "Two year". The group of people labeled with this, they probability of Churn reduced significantly.
+
+
+
+
+
 
 
 \newpage
