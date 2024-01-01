@@ -22,7 +22,6 @@ opts_chunk$set(message=FALSE, tidy.opts=list(width.cutoff=60), tidy=TRUE)
 ```
 
 - #Pàgines actual (sense annex): 36/50 en pdf i 41/50 en word
-- Profiling: AN EXTRA POINT TO BE DONE. WE CAN DO IT LATTER. USE THE SCRIPT PROVIDED BY MVA ???
 - SI GENEREM UN WORD, L'HEM DE JUSTIFICAR I HEM DE NUMERAR-NE LES PÀGINES ABANS DE CONVERTIR-LO A PDF.
 
 # 0. Introduction
@@ -44,6 +43,8 @@ library(chemometrics)
 library(corrplot)
 source("profiling_func.R")
 library(ROSE)
+library(DescTools)
+library(caret)
 ```
 
 ```{r Import dataset, include=FALSE}
@@ -617,18 +618,38 @@ influent = influencePlot(m9)[3]; influent
 
 # Calculate D's threshold
 D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
+
+sum(outliers==269)
+sum(outliers==4273)
+
+df$Churn[269]
+df$Churn[4273]
+
+sum(Boxplot(df$tenure[df$Churn=="Yes"])==269)
+sum(Boxplot(df$tenure[df$Churn=="Yes"])==4273)
+
+sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==269)
+sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==4273)
 ```
 
-Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold.
+Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold. Any of these are mutlivariate outliers or severe outliers of a numerical variable when looked in their category of Churn.
 
 \newpage
 # 6. Goodness of fit
 
-NOT FINISHED FROM HERE UNTIL THE ANNEX
-
 ```{r Residual plots}
 residualPlots(m5)
 ```
+
+The results are not perfect, so we see what happens when we remove all multivariate outliers.
+
+```{r Residual plots}
+m5.mout = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
+          + PaymentMethod, data = train[-outliers,], family = binomial)
+residualPlots(m5.mout)
+```
+
+We cannot compare the BIC nor other measure of fitness between m5 and m5.mout because they do not have the same cardinality. Therefore, we have simply observed the residualPlot, which have gotten worse actually. The conclusion we extract from this fact is that it is better to keep multivariate outliers.
 
 ## Model prediction
 
@@ -639,27 +660,39 @@ predictions = predict(m5, test, type = "response")
 
 # Then, for those that have a probability higher than 0.5, we can consider
 # Churn == "Yes"
-probability = ifelse(predictions >= 0.5, "Yes", "No")
+probability = factor(as.character(ifelse(predictions >= 0.5, "Yes", "No")))
 
 # Finally, compute the Confusion Matrix of predicted result.
 CM = table(test$Churn, probability, dnn = c("Actual Churn", "Predicted Churn")); CM
+
+confusionMatrix(probability, test$Churn, mode = "everything", positive="1")
 
 accuracy = sum(diag(CM))/dim(test)[1]*100; accuracy
 
 roc.curve(test$Churn, probability)
 ```
 
+- accuracy not trustable.
+- check other measures
+- comment roc curve
 
 ```{r PseudoR2()}
-library(DescTools)
 PseudoR2(m5, which = "McFadden")
 ```
+
 
 \newpage
 # 7. Model interpretation
 
+
+\newpage
+# 8. Conclusions
+- Our model is simple and easily interpretable
+- Our model isn't perfect, but it's fine because it's unbalanced
+- Future work: balance data and compare the new model with the actual
 \newpage
 # Annex
+
 
 ## Expanded profiling of the target with the "profiling()" method
 
