@@ -637,13 +637,19 @@ Observations 269 and 4273 may be influential points, but both of them are smalle
 \newpage
 # 6. Goodness of fit
 
+```{r PseudoR2()}
+PseudoR2(m5, which = "McFadden")
+```
+
+Not excellent, but acceptable.
+
 ```{r Residual plots}
 residualPlots(m5)
 ```
 
 The results are not perfect, so we see what happens when we remove all multivariate outliers.
 
-```{r Residual plots}
+```{r m5.out}
 m5.mout = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod, data = train[-outliers,], family = binomial)
 residualPlots(m5.mout)
@@ -651,7 +657,10 @@ residualPlots(m5.mout)
 
 We cannot compare the BIC nor other measure of fitness between m5 and m5.mout because they do not have the same cardinality. Therefore, we have simply observed the residualPlot, which have gotten worse actually. The conclusion we extract from this fact is that it is better to keep multivariate outliers.
 
+
 ## Model prediction
+
+Once we have our final model m5 we can predict the values of Churn on the test dataset
 
 ```{r predict()}
 # First, we compute the probability of Churn for each observation (from test) 
@@ -662,24 +671,13 @@ predictions = predict(m5, test, type = "response")
 # Churn == "Yes"
 probability = factor(as.character(ifelse(predictions >= 0.5, "Yes", "No")))
 
-# Finally, compute the Confusion Matrix of predicted result.
-CM = table(test$Churn, probability, dnn = c("Actual Churn", "Predicted Churn")); CM
-
-confusionMatrix(probability, test$Churn, mode = "everything", positive="1")
-
-accuracy = sum(diag(CM))/dim(test)[1]*100; accuracy
+# Finally, compute the Confusion Matrix of predicted result
+confusionMatrix(probability, test$Churn, mode = "everything", positive="Yes")
 
 roc.curve(test$Churn, probability)
 ```
 
-- accuracy not trustable.
-- check other measures
-- comment roc curve
-
-```{r PseudoR2()}
-PseudoR2(m5, which = "McFadden")
-```
-
+With the predicted values of the target, we can also study the goodness of fit of the model m5 through the confusion matrix. The most typical measure obtained from this matrix is the accuracy, but in our case it is not trustable because we have unbalanced data. Hence, we resort to the F1-score, a harmonic mean that is less influenced by unbalanced data. We got a value of 56%, which is not great, but it is not a worthless model. This is confirmed by the ROC curve plotted above.
 
 \newpage
 # 7. Model interpretation
