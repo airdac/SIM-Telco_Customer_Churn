@@ -610,22 +610,25 @@ influent = influencePlot(m9)[3]; influent
 # Calculate D's threshold
 D_thresh <- 2/sqrt(dim(train)[1]); D_thresh
 
-# the most influent observation are the 269 and 4273 with biggest Cook's distance. But both are not included in the multivariate outlier.
+# The most influential observations are the 269 and 4273, which are the ones with the biggest Cook's distance. Nonetheless, any of them is a multivariate outlier.
 sum(outliers==269)
 sum(outliers==4273)
 
 df$Churn[269]
 df$Churn[4273]
 
-# Neither in univariate outlier in tenure and TotalCharges.
+# Neither is a univariate outlier in tenure and TotalCharges when analyzed inside their target's category.
 sum(Boxplot(df$tenure[df$Churn=="Yes"])==269)
 sum(Boxplot(df$tenure[df$Churn=="Yes"])==4273)
+
+sum(Boxplot(df$MonthlyCharges[df$Churn=="Yes"])==269)
+sum(Boxplot(df$MonthlyCharges[df$Churn=="Yes"])==4273)
 
 sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==269)
 sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==4273)
 ```
 
-Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold. Any of these are mutlivariate outliers or severe outliers of a numerical variable when looked in their category of Churn. Hence, we won't remove any of them.
+Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold. Any of these are mutlivariate outliers or severe outliers of a numerical variable when looked in their category of Churn.  They are not neither globally, since we saw in the preprocessing that there were no severe outliers. Hence, we won't remove any of them.
 
 \newpage
 # 6. Goodness of fit
@@ -634,13 +637,18 @@ Observations 269 and 4273 may be influential points, but both of them are smalle
 PseudoR2(m5, which = "McFadden")
 ```
 
-The R2 of McFadden isn't excellent, but acceptable. Let's check the residual plots.
+The R2 of McFadden is not excellent, but at least it is acceptable. Let us check the residual plots.
 
 ```{r Residual plots}
 residualPlots(m5)
+
+# Outliers in the residual plots might be caused, in part, by unbalanced data
+prop.table(table(df$Contract))
+prop.table(table(df$InternetService))
+prop.table(table(df$PaymentMethod))
 ```
 
-In the residual plot we see that all levels in the model contains severe outliers, except for "Month-to-month" (there is only 1 outlier). However, those points does not seem to affect pearson residuals distributions that are all close to zero as expected.
+In the residual plots we see that all levels in the model contain severe outliers, except for "Month-to-month" (there is only 1 outlier). However, those points do not seem to affect the Pearson residuals distributions, which are all close to zero as expected. Moreover, they might be caused by unbalanced data.
 
 ```{r m5.out}
 m5.mout = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
@@ -648,11 +656,11 @@ m5.mout = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetServic
 residualPlots(m5.mout)
 ```
 
-To try to remove those outliers from the categorical variables we remove all multivariate outliers. This gives us an alternative model (m5.mout) that we cannot compare using BIC or other measure of fitness as models does not have the same cardinality. However, the new model does still contains the outliers in the residual plot so we consider that it is better not to remove the multivariate outliers.
+To try to remove those outliers from the categorical variables we remove all multivariate outliers. This gives us an alternative model (m5.mout) that we cannot compare using BIC or other measure of fitness as the models do not have the same cardinality. However, the new model still contains outliers in the residual plot, so we consider that it is better not to remove the multivariate outliers. This backs up the hypothesis of unbalanced data causing outliers in the Pearson residuals.
 
 ## Model prediction
 
-Once we have our final model m5 we can predict the values of Churn on the test dataset
+Once we have our final model m5 we can predict the values of Churn on the test dataset.
 
 ```{r predict()}
 # First, we compute the probability of Churn for each observation (from test) with predict function.
@@ -667,23 +675,25 @@ confusionMatrix(probability, test$Churn, mode = "everything", positive="Yes")
 roc.curve(test$Churn, probability)
 ```
 
-With the predicted values of the target, we can also study the goodness of fit of the model m5 through the confusion matrix. The most typical measure obtained from this matrix is the accuracy, but in our case it is not trustable because we have unbalanced data. Hence, we resort to the F1-score, a harmonic mean that is less influenced by unbalanced data. We got a value of 56%, which is not great, but it is not a worthless model. This is confirmed by the ROC curve plotted above.
+With the predicted values of the target, we can also study the goodness of fit of the model m5 through the confusion matrix. The most typical measure obtained from this matrix is the accuracy, but in our case it is not trustable because we have unbalanced data. Hence, we resort to the F1-score, a harmonic mean that is less influenced by unbalanced data. We got a value of 56%, which is not great, but it is not a worthless model. This is confirmed by the ROC curve plotted above, with AUC = 0.70.
 
 \newpage
 # 7. Model interpretation
 
-Finally, let's resume our final model, and try to interpret it.
+Finally, let's summarize and interpret our final model.
 
 ```{r}
 m5 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod, data = train, family = binomial)
+
+summary(m5)
 ```
 
-The model is composed by the tenure of the customer, the amount of bill they pay monthly, the  contract period that they have with the company, the internet service they own and then the payment method.
+The model is composed by the tenure of the customer, the bill they pay monthly, the  contract period that they have with the company, the internet service they own and the payment method.
 
-Bear in mind that 0 denotes "No Churn" and 1 denotes "Churn Yes", where clients with lower scores are less liketo to leave the company.
+Bear in mind that 0 denotes "client churned" and 1 denotes "client did not churn", where clients with lower scores are less likely to leave the company.
 
-Examining the coefficients of m5, client with longer seniority and contract type are more comfortable with the company and less likely to churn.
+Examining the coefficients of m5, clients with longer seniority and contract type are more comfortable with the company and less likely to churn.
 
 The negative coefficient of InternetService equals to "No" may indicate that this group of individual prefer for a more basic service but are more stable. On the other hand, individual with InternetService equals to "Fiber optic" shows a positive coefficient, suggesting a preference for advance internet service, but also higher flexible to switch the company.
 
@@ -691,7 +701,7 @@ A surprising observation is that the payment method is also an influential featu
 
 But overall, the most influential variable are Contract type. The group of people labeled with "One year" and "Two year", they probability of Churn reduced significantly.
 
-
+\newpage
 # 8. Conclusions
 
 In this work, we modeled a generalized linear model that predicts the probability to churn using {tenure, MonthlyCharges, Contract, InternetService, PaymentMethod}, all these predictors are explained with detail in the previous chapter, and they make sense intuitively.
