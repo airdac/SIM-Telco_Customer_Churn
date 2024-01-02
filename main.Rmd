@@ -21,9 +21,6 @@ library(knitr)
 opts_chunk$set(message=FALSE, tidy.opts=list(width.cutoff=60), tidy=TRUE)
 ```
 
-- #Pàgines actual (sense annex): 36/50 en pdf i 41/50 en word
-- SI GENEREM UN WORD, L'HEM DE JUSTIFICAR I HEM DE NUMERAR-NE LES PÀGINES ABANS DE CONVERTIR-LO A PDF.
-
 # 0. Introduction
 
 In this project, we will study the data set "Telco Customer Churn", which can be found at https://www.kaggle.com/datasets/blastchar/telco-customer-churn. Our goal is to analyze the correlation between the amount of customers who left within the last month (Churn) and different features that describe the customer and the services he/she/they has signed up for. Then, we will build a logistic model that will allow us to predict the variable Churn.
@@ -628,7 +625,7 @@ sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==269)
 sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==4273)
 ```
 
-Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold. Any of these are mutlivariate outliers or severe outliers of a numerical variable when looked in their category of Churn.  They are not neither globally, since we saw in the preprocessing that there were no severe outliers. Hence, we won't remove any of them.
+Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold. Any of these are multivariate outliers or severe outliers of a numerical variable when looked in their category of Churn. They are not neither globally, since we saw in the preprocessing that there were no severe outliers. Hence, we won't remove any of them.
 
 \newpage
 # 6. Goodness of fit
@@ -675,7 +672,15 @@ confusionMatrix(probability, test$Churn, mode = "everything", positive="Yes")
 roc.curve(test$Churn, probability)
 ```
 
-With the predicted values of the target, we can also study the goodness of fit of the model m5 through the confusion matrix. The most typical measure obtained from this matrix is the accuracy, but in our case it is not trustable because we have unbalanced data. Hence, we resort to the F1-score, a harmonic mean that is less influenced by unbalanced data. We got a value of 56%, which is not great, but it is not a worthless model. This is confirmed by the ROC curve plotted above, with AUC = 0.70.
+With the predicted values of the target, we can also study the goodness of fit of the model m5 through the confusion matrix. The most typical measure obtained from this matrix is the accuracy, but in our case it is not reliable because we have unbalanced data. Hence, we resort to the F1-score, a harmonic mean that is less influenced by unbalanced data. We got a value of 56%, which is not great, but it is not a worthless model. This is confirmed by the ROC curve plotted above, with AUC = 0.70.
+
+Finally, we compare m5 with the null model to see the improvement we have obtained.
+```{r}
+m.null = glm(Churn ~ 1,  data = train, family = binomial)
+
+BIC (m5, m.null)
+```
+BIC coefficient decreased from 5712 to 4174. So we improve the predictive capability.
 
 \newpage
 # 7. Model interpretation
@@ -687,39 +692,39 @@ m5 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod, data = train, family = binomial)
 
 summary(m5)
+
+sort(exp(m5$coefficients), decreasing = TRUE)
 ```
 
 The model is composed by the tenure of the customer, the bill they pay monthly, the  contract period that they have with the company, the internet service they own and the payment method.
 
-Bear in mind that 0 denotes "client churned" and 1 denotes "client did not churn", where clients with lower scores are less likely to leave the company.
+Bear in mind that 1 denotes "client churned" and 0 denotes "client did not churn", where clients with a lower linear predictor are less likely to leave the company.
 
-Examining the coefficients of m5, clients with longer seniority and contract type are more comfortable with the company and less likely to churn.
+As a consequence, loyalty (more tenure), reduces the odds to churn while MonthlyCharges increases it. Also, with categorical variables we see that costumers with a Fiber optic double the odds to churn with respect to costumers with a DSL service (reference category for "InternetService") all else being equal. 
 
-The negative coefficient of InternetService equals to "No" may indicate that this group of individual prefer for a more basic service but are more stable. On the other hand, individual with InternetService equals to "Fiber optic" shows a positive coefficient, suggesting a preference for advance internet service, but also higher flexible to switch the company.
+Additionally, paying with Electronic check, instead of a "bank transfer" increases by 62% the odds to churn, all else being equal. Other payment methods do not have a big impact on the Churn.
 
-A surprising observation is that the payment method is also an influential feature. Those who pay manually with electronic checks are much more likely to churn than those with automated or mailed checks. Pherhaps because of the fully automated process, the billing are less susceptible by the client.
+More importantly, it seems that having long contract periods is very important to reduce the odds to churn, as clients that have a biannual contract have approximately 99% less odds of not to churn compared to the ones that have a monthly contract, all else being equal. 
 
-But overall, the most influential variable are Contract type. The group of people labeled with "One year" and "Two year", they probability of Churn reduced significantly.
+Additionally, not having internet is also important, as those clients have 50% less odds to churn with respect to the ones that have a DSL service all else being equal. This may indicate that this group of individuals prefer a more basic service but are more stable.
+
 
 \newpage
 # 8. Conclusions
 
-In this work, we modeled a generalized linear model that predicts the probability to churn using {tenure, MonthlyCharges, Contract, InternetService, PaymentMethod}, all these predictors are explained with detail in the previous chapter, and they make sense intuitively.
+In this work, we modeled a generalized linear model that predicts the probability to churn using {tenure, MonthlyCharges, Contract, InternetService, PaymentMethod}, all these predictors are explained with detail in the previous chapter. In total, our model predictors are composed of 2 numerical features and 3 categorical variables, with tenure transformed and no interactions.
 
-In total, our model predictors are composed of 2 numerical features and 3 categorical variables, with one transformations on the tenure and no interactions.
-
-The indicator of performance of this model shows a F1 score of 0.5640, and Area under the Curve (AUC) of 0.701. Accuracy is not considered in this case as the dataset's imbalance, there is much less Churn observation than "No Churn".
-
-At below confusion matrix, we can observe that the performance of predicting True Positive is quite poor (approximately 50%).
+The indicator of performance of this model shows a F1 score of 0.5640, and Area under the Curve (AUC) of 0.701. Accuracy is not considered because of the dataset's imbalance, indeed many people churned. As a consequence our confusion matrix, found below, contain more errors than True Positives.
 
             Predicted Churn
 Actual Churn   No  Yes
          No  1395  157
          Yes  279  282
-         
-Although our model isn't perfect, we're searching a balance between simplicity and accuracy, considering the trade-off associated with adding more variables and interactions indeed will improve the performance, but with the cost of increasing degree of freedom and complexity of the model, which lately make it hard to be interpreted.
 
-As future work, we can try to study different method to balance the data set, either undersampling the majority class or uppersampling the minority class.
+Although our model is not perfect, we are searching a balance between simplicity and accuracy, considering the trade-off associated with adding more variables and interactions. Indeed that would improve the fitness, but with the cost of increasing the parameters and complexity of the model, which lately make it harder to be interpreted.
+
+As future work, we can try to study different methods to balance the data set, either undersampling the category of people who did not churn or uppersampling the complementary category. 
+
 
 \newpage
 # Annex
