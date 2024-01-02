@@ -42,6 +42,9 @@ source("profiling_func.R")
 library(ROSE)
 library(DescTools)
 library(caret)
+library(tidyverse)
+library(DT)
+library(kableExtra)
 ```
 
 ```{r Import dataset, include=FALSE}
@@ -59,7 +62,7 @@ summary(df)
 
 The data set contains `r dim(df)[1]` observations of `r dim(df)[2]` variables.
 
-\newpage
+
 # 1. Data preparation
 
 The first part of the project consisted on doing some basic data preparation to ensure that data is ready for the next sections.
@@ -146,7 +149,7 @@ categoric_val_idx = which(sapply(df, is.factor))
 categoric_val = names(df)[categoric_val_idx]
 ```
 
-\newpage
+
 # 2. Exploratory Data Analysis (EDA)
 
 EDA was done mainly automatically using the "DataExplorer" library. It plots, for each variable, the distribution of numeric variables, the proportion of individuals in each category and the amount of missing values, among other metadata.
@@ -164,8 +167,8 @@ The main conclusions of this section are:
 # Basic EDA
 summary(df)
 
-# Completed EDA 
-# create_report(df, output_file = "Telco.html")
+# Complete EDA 
+#create_report(df, output_format = "pdf_document", output_file = "Telco.pdf")
 ```
 
 ```{r Analysis of normality}
@@ -199,7 +202,7 @@ plot(x,y, xlab = 'df$MonthlyCharges', ylab = '')
 par(mfrow=c(1,1))
 ```
 
-\newpage
+
 # 3. Data Quality Report
 
 In this section we analysed the missing values, outliers and errors of numeric variables to increase the quality of data before modeling.
@@ -325,7 +328,7 @@ length(outliers)
 length(outliers)/dim(df)[1]*100
 ```
 
-\newpage
+
 # 4. Profiling of the target and feature selection
 
 ## Numeric variables' correlations
@@ -424,7 +427,7 @@ res.cat2$category
 # profiling(df[,index], df$Churn, "Churn")
 ```
 
-\newpage
+
 # 5. Modeling 
 
 ## Data splitting
@@ -627,7 +630,7 @@ sum(Boxplot(df$TotalCharges[df$Churn=="Yes"])==4273)
 
 Observations 269 and 4273 may be influential points, but both of them are smaller than the threshold. Any of these are multivariate outliers or severe outliers of a numerical variable when looked in their category of Churn. They are not neither globally, since we saw in the preprocessing that there were no severe outliers. Hence, we won't remove any of them.
 
-\newpage
+
 # 6. Goodness of fit
 
 ```{r PseudoR2()}
@@ -667,7 +670,7 @@ predictions = predict(m5, test[-20], type = "response")
 probability = factor(as.character(ifelse(predictions >= 0.5, "Yes", "No")))
 
 # Finally, compute the Confusion Matrix of predicted result
-confusionMatrix(probability, test$Churn, mode = "everything", positive="Yes")
+confusion.mat <- confusionMatrix(probability, test$Churn, mode = "everything", positive="Yes"); confusion.mat
 
 roc.curve(test$Churn, probability)
 ```
@@ -675,19 +678,19 @@ roc.curve(test$Churn, probability)
 With the predicted values of the target, we can also study the goodness of fit of the model m5 through the confusion matrix. The most typical measure obtained from this matrix is the accuracy, but in our case it is not reliable because we have unbalanced data. Hence, we resort to the F1-score, a harmonic mean that is less influenced by unbalanced data. We got a value of 56%, which is not great, but it is not a worthless model. This is confirmed by the ROC curve plotted above, with AUC = 0.70.
 
 Finally, we compare m5 with the null model to see the improvement we have obtained.
-```{r}
+```{r Comparison with null model}
 m.null = glm(Churn ~ 1,  data = train, family = binomial)
 
 BIC (m5, m.null)
 ```
 BIC coefficient decreased from 5712 to 4174. So we improve the predictive capability.
 
-\newpage
+
 # 7. Model interpretation
 
 Finally, let's summarize and interpret our final model.
 
-```{r}
+```{r Model interpretation}
 m5 = glm (Churn ~ sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod, data = train, family = binomial)
 
@@ -709,17 +712,16 @@ More importantly, it seems that having long contract periods is very important t
 Additionally, not having internet is also important, as those clients have 50% less odds to churn with respect to the ones that have a DSL service all else being equal. This may indicate that this group of individuals prefer a more basic service but are more stable.
 
 
-\newpage
+
 # 8. Conclusions
 
-In this work, we modeled a generalized linear model that predicts the probability to churn using {tenure, MonthlyCharges, Contract, InternetService, PaymentMethod}, all these predictors are explained with detail in the previous chapter. In total, our model predictors are composed of 2 numerical features and 3 categorical variables, with tenure transformed and no interactions.
+In this project we have created a generalized linear model that predicts the probability to churn using {tenure, MonthlyCharges, Contract, InternetService, PaymentMethod}, all these predictors are explained with detail in the previous chapter. In total, our model predictors are composed of 2 numerical features and 3 categorical variables, with tenure transformed and no interactions.
 
 The indicator of performance of this model shows a F1 score of 0.5640, and Area under the Curve (AUC) of 0.701. Accuracy is not considered because of the dataset's imbalance, indeed many people churned. As a consequence our confusion matrix, found below, contain more errors than True Positives.
 
-            Predicted Churn
-Actual Churn   No  Yes
-         No  1395  157
-         Yes  279  282
+```{r kable(confusionMatrix), echo = FALSE}
+knitr::kable(confusion.mat$table)
+```
 
 Although our model is not perfect, we are searching a balance between simplicity and accuracy, considering the trade-off associated with adding more variables and interactions. Indeed that would improve the fitness, but with the cost of increasing the parameters and complexity of the model, which lately make it harder to be interpreted.
 
@@ -736,3 +738,5 @@ As future work, we can try to study different methods to balance the data set, e
 profiling(df[-c(grep("customerID", names(df)), grep("Churn", names(df)))], df$Churn, "Churn")
 ```
 
+\newpage
+## Complete EDA
