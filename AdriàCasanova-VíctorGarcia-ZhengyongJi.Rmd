@@ -3,17 +3,11 @@ title: 'SIM. Assignment 2: Telco Customer Churn'
 author: "Adrià Casanova, Víctor Garcia, Zhengyong Ji"
 date: "2024-01-05"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: 3
-    number_sections: no
   word_document:
     toc: yes
     toc_depth: '3'
 editor_options:
   chunk_output_type: console
-header-includes: \usepackage{fvextra} \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
-  \usepackage{listings} \lstset{breaklines=true}
 ---
 
 ```{r, global_options, include=FALSE}
