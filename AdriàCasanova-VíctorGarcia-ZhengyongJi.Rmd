@@ -1,5 +1,5 @@
 ---
-title: "SIM. Assignment 2: Telco Customer Churn"
+title: 'SIM. Assignment 2: Telco Customer Churn'
 author: "Adrià Casanova, Víctor Garcia, Zhengyong Ji"
 date: "2024-01-05"
 output:
@@ -7,13 +7,13 @@ output:
     toc: yes
     toc_depth: 3
     number_sections: no
+  word_document:
+    toc: yes
+    toc_depth: '3'
 editor_options:
   chunk_output_type: console
-header-includes:
-  \usepackage{fvextra}
-  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
-  \usepackage{listings}
-  \lstset{breaklines=true}
+header-includes: \usepackage{fvextra} \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+  \usepackage{listings} \lstset{breaklines=true}
 ---
 
 ```{r, global_options, include=FALSE}
@@ -553,7 +553,7 @@ As before, the Cook's distances obtained from "influencePlot()" are smaller than
 
 Sometimes interactions between dependent variables improve a model, so let us see how they work in our case. To start with, we check all possible interactions and execute "step()" to end up with the most relevant ones.
 
-```{r Check all possible interactions of model m5}
+```{r Check all possible interactions of model m5, results='hide'}
 m6 = glm (Churn ~ (sqrt(tenure) + MonthlyCharges + Contract + InternetService
           + PaymentMethod)^2, data = train, family = binomial)
 
